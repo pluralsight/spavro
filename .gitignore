@@ -1,0 +1,28 @@
+# Standard Python files
+*.template.py
+*.pyc
+#*#
+._*
+*.sqlite
+*.pyc
+*.pid
+*.log
+tmp/
+src/
+build/
+logs/*
+
+# OSX file metadata
+.DS_Store
+
+environment.py
+environments/*
+
+# Unit test artifacts
+.coverage_output.xml
+.nose_output.xml
+.coverage
+
+# other stuff
+samples
+output
