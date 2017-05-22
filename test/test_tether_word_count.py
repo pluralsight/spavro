@@ -37,8 +37,8 @@ class TestTetherWordCount(unittest.TestCase):
     fname - the name of the file to write to.
     """
     import avro.io as avio
-    from avro.datafile import DataFileReader,DataFileWriter
-    from avro import schema
+    from spavro.datafile import DataFileReader,DataFileWriter
+    from spavro import schema
 
     #recursively make all directories
     dparts=fname.split(os.sep)[:-1]
@@ -85,9 +85,9 @@ class TestTetherWordCount(unittest.TestCase):
     Assumptions: 1) bash is available in /bin/bash
     """
     from word_count_task import WordCountTask
-    from avro.tether import tether_task_runner
-    from avro.datafile import DataFileReader
-    from avro.io import DatumReader
+    from spavro.tether import tether_task_runner
+    from spavro.datafile import DataFileReader
+    from spavro.io import DatumReader
     import avro
 
     import subprocess

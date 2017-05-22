@@ -22,8 +22,8 @@ from binascii import hexlify
 
 import set_avro_test_path
 
-from avro import schema
-from avro import io
+from spavro import schema
+from spavro import io
 
 SCHEMAS_TO_VALIDATE = (
   ('"null"', None),

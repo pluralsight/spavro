@@ -22,8 +22,8 @@ except ImportError:
     import simplejson as json
 from tempfile import NamedTemporaryFile
 import avro.schema
-from avro.io import DatumWriter
-from avro.datafile import DataFileWriter
+from spavro.io import DatumWriter
+from spavro.datafile import DataFileWriter
 from os.path import dirname, join, isfile
 from os import remove
 from operator import itemgetter

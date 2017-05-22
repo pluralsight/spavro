@@ -17,7 +17,7 @@
 Test the protocol parsing logic.
 """
 import unittest
-from avro import protocol
+from spavro import protocol
 
 class ExampleProtocol(object):
   def __init__(self, protocol_string, valid, name='', comment=''):

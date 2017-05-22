@@ -18,7 +18,7 @@
 
 __all__=["WordCountTask"]
 
-from avro.tether import TetherTask
+from spavro.tether import TetherTask
 
 import logging
 

@@ -17,9 +17,9 @@
 import sys
 import set_avro_test_path
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
-from avro import ipc
-from avro import protocol
-from avro import tether
+from spavro import ipc
+from spavro import protocol
+from spavro import tether
 
 import socket
 

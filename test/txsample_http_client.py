@@ -20,8 +20,8 @@ import sys
 from twisted.internet import reactor, defer
 from twisted.python.util import println
 
-from avro import protocol
-from avro import txipc
+from spavro import protocol
+from spavro import txipc
 
 MAIL_PROTOCOL_JSON = """\
 {"namespace": "example.proto",

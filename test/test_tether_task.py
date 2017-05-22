@@ -33,10 +33,10 @@ class TestTetherTask(unittest.TestCase):
     Test that the thether_task is working. We run the mock_tether_parent in a separate
     subprocess
     """
-    from avro import tether
-    from avro import io as avio
-    from avro import schema
-    from avro.tether import HTTPRequestor,inputProtocol, find_port
+    from spavro import tether
+    from spavro import io as avio
+    from spavro import schema
+    from spavro.tether import HTTPRequestor,inputProtocol, find_port
 
     import StringIO
     import mock_tether_parent

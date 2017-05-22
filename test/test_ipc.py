@@ -23,7 +23,7 @@ import set_avro_test_path
 
 # This test does import this code, to make sure it at least passes
 # compilation.
-from avro import ipc
+from spavro import ipc
 
 class TestIPC(unittest.TestCase):
   def test_placeholder(self):

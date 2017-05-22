@@ -16,8 +16,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
-from avro import ipc
-from avro import protocol
+from spavro import ipc
+from spavro import protocol
 
 MAIL_PROTOCOL_JSON = """\
 {"namespace": "example.proto",

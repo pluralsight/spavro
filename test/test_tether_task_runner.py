@@ -29,8 +29,8 @@ class TestTetherTaskRunner(unittest.TestCase):
 
   def test1(self):
     from word_count_task import WordCountTask
-    from avro.tether import TaskRunner, find_port,HTTPRequestor,inputProtocol, TaskType
-    from avro import io as avio
+    from spavro.tether import TaskRunner, find_port,HTTPRequestor,inputProtocol, TaskType
+    from spavro import io as avio
     import mock_tether_parent
     import subprocess
     import StringIO
@@ -134,9 +134,9 @@ class TestTetherTaskRunner(unittest.TestCase):
     in a separate thread.
     """
     from word_count_task import WordCountTask
-    from avro.tether import TaskRunner, find_port,HTTPRequestor,inputProtocol, TaskType
-    from avro.tether import tether_task_runner
-    from avro import io as avio
+    from spavro.tether import TaskRunner, find_port,HTTPRequestor,inputProtocol, TaskType
+    from spavro.tether import tether_task_runner
+    from spavro import io as avio
     import mock_tether_parent
     import subprocess
     import StringIO

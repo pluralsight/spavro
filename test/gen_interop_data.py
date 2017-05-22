@@ -16,9 +16,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import sys
-from avro import schema
-from avro import io
-from avro import datafile
+from spavro import schema
+from spavro import io
+from spavro import datafile
 
 DATUM = {
   'intField': 12,

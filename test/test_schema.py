@@ -19,7 +19,7 @@ Test the schema parsing logic.
 import unittest
 import set_avro_test_path
 
-from avro import schema
+from spavro import schema
 
 def print_test_name(test_name):
   print ''
