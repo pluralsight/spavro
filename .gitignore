@@ -26,3 +26,8 @@ environments/*
 # other stuff
 samples
 output
+
+#build artifacts
+*.egg-info
+*.so
+dist/*
