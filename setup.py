@@ -16,7 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 try:
-  from setuptools import setup, find_packages
+  from setuptools import setup
 except ImportError:
   from distutils.core import setup
 from sys import version_info
@@ -39,7 +39,6 @@ if USE_CYTHON:
     sys.stderr.write("CYTHONIZING...\n")
     extensions = cythonize(extensions)
 
-print("Packages: ", find_packages())
 # raise Exception("WHAT THE FRIG")
 setup(
   name='spavro',
