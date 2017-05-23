@@ -47,22 +47,6 @@ except ImportError:
     import simplejson as json
 
 #
-# Decoder/Encoder
-#
-import logging
-logging.basicConfig(level=logging.DEBUG)
-log = logging.getLogger(__name__)
-try:
-    # raise ImportError("Ooops")
-    from fast_binary import BinaryDecoder #, BinaryEncoder
-    from fast_binary import get_reader
-    log.warn("Using fast C extension")
-except ImportError:
-    from binary import BinaryEncoder, BinaryDecoder
-    log.warn("Failed to load spavro C extension")
-
-from binary import BinaryEncoder
-#
 # Constants
 #
 
@@ -161,9 +145,25 @@ def validate(expected_schema, datum):
                 [validate(f.type, datum.get(f.name)) for f in expected_schema.fields])
 
 #
+# Decoder/Encoder
+#
+import logging
+logging.basicConfig(level=logging.DEBUG)
+log = logging.getLogger(__name__)
+try:
+        # raise ImportError("Ooops")
+        from fast_binary import BinaryDecoder #, BinaryEncoder
+        from fast_binary import get_reader
+        log.warn("Using fast C extension")
+except ImportError:
+        from binary import BinaryEncoder, BinaryDecoder
+        log.warn("Failed to load spavro C extension")
+
+from binary import BinaryEncoder
+
+#
 # DatumReader/Writer
 #
-
 
 class DatumReader(object):
     """Deserialize Avro-encoded data into a Python data structure."""
@@ -184,21 +184,21 @@ class DatumReader(object):
                     and w_type == r_type):
             return True
         elif (w_type == r_type == 'record' and
-                    DatumReader.check_props(writers_schema, readers_schema, 
+                    DatumReader.check_props(writers_schema, readers_schema,
                                                                     ['fullname'])):
             return True
         elif (w_type == r_type == 'error' and
-                    DatumReader.check_props(writers_schema, readers_schema, 
+                    DatumReader.check_props(writers_schema, readers_schema,
                                                                     ['fullname'])):
             return True
         elif (w_type == r_type == 'request'):
             return True
         elif (w_type == r_type == 'fixed' and
-                    DatumReader.check_props(writers_schema, readers_schema, 
+                    DatumReader.check_props(writers_schema, readers_schema,
                                                                     ['fullname', 'size'])):
             return True
         elif (w_type == r_type == 'enum' and
-                    DatumReader.check_props(writers_schema, readers_schema, 
+                    DatumReader.check_props(writers_schema, readers_schema,
                                                                     ['fullname'])):
             return True
         elif (w_type == r_type == 'map' and
@@ -225,29 +225,12 @@ class DatumReader(object):
         in the data the "writer's schema", and the schema expected by the
         reader the "reader's schema".
         """
-
-        # if writers_schema:
-        #     schema_dict = writers_schema.to_json()
-        #     # schema_dict = json.loads(writers_schema.to_json())
-        #     self.read_records = get_reader(schema_dict)
-
         if writers_schema:
             self.writers_schema = writers_schema
         if readers_schema:
             self.readers_schema = readers_schema
         if writers_schema and not readers_schema:
             self.readers_schema = writers_schema
-
-        self.lookup = {
-                'null': lambda decoder: getattr(decoder, 'read_null'),
-                'boolean': lambda decoder: getattr(decoder, 'read_boolean'),
-                "string": lambda decoder: getattr(decoder, 'read_utf8'),
-                "int": lambda decoder: getattr(decoder, 'read_int'),
-                "long": lambda decoder: getattr(decoder, 'read_long'),
-                "float": lambda decoder: getattr(decoder, 'read_float'),
-                "double": lambda decoder: getattr(decoder, 'read_double'),
-                "bytes": lambda decoder: getattr(decoder, 'read_bytes')
-        }
 
     @property
     def writers_schema(self):
@@ -275,43 +258,44 @@ class DatumReader(object):
         # and pass the underlying file object to the read_datum function
         return self.read_datum(decoder.reader)
 
+    def xread(self, decoder):
+        if self.readers_schema is None:
+            self.readers_schema = self.writers_schema
+        return self.read_data(self.writers_schema, self.readers_schema, decoder)
+
     def read_data(self, writers_schema, readers_schema, decoder):
-        # # schema matching
-        # if not DatumReader.match_schemas(writers_schema, readers_schema):
-        #     fail_msg = 'Schemas do not match.'
-        #     raise SchemaResolutionException(fail_msg, writers_schema, readers_schema)
+        # schema matching
+        if not DatumReader.match_schemas(writers_schema, readers_schema):
+            fail_msg = 'Schemas do not match.'
+            raise SchemaResolutionException(fail_msg, writers_schema, readers_schema)
+
         # schema resolution: reader's schema is a union, writer's schema is not
+        if (writers_schema.type not in ['union', 'error_union']
+                and readers_schema.type in ['union', 'error_union']):
+            for s in readers_schema.schemas:
+                if DatumReader.match_schemas(writers_schema, s):
+                    return self.read_data(writers_schema, s, decoder)
+            fail_msg = 'Schemas do not match.'
+            raise SchemaResolutionException(fail_msg, writers_schema, readers_schema)
 
-        # if (writers_schema.type not in ['union', 'error_union']
-        #         and readers_schema.type in ['union', 'error_union']):
-        #     for s in readers_schema.schemas:
-        #         if DatumReader.match_schemas(writers_schema, s):
-        #             return self.read_data(writers_schema, s, decoder)
-        #     fail_msg = 'Schemas do not match.'
-        #     raise SchemaResolutionException(fail_msg, writers_schema, readers_schema)
         # function dispatch for reading data based on type of writer's schema
-        # if writers_schema.type == 'null':
-        #     return decoder.read_null()
-        # elif writers_schema.type == 'boolean':
-        #     return decoder.read_boolean()
-        # elif writers_schema.type == 'string':
-        #     return decoder.read_utf8()
-        # elif writers_schema.type == 'int':
-        #     return decoder.read_int()
-        # elif writers_schema.type == 'long':
-        #     return decoder.read_long()
-        # elif writers_schema.type == 'float':
-        #     return decoder.read_float()
-        # elif writers_schema.type == 'double':
-        #     return decoder.read_double()
-        # elif writers_schema.type == 'bytes':
-        #     return decoder.read_bytes()
-        # return decoder.read_data(writers_schema)
-        simpletype = self.lookup.get(writers_schema.type)
-        if simpletype:
-            return simpletype(decoder)()
-
-        if writers_schema.type == 'fixed':
+        if writers_schema.type == 'null':
+            return decoder.read_null()
+        elif writers_schema.type == 'boolean':
+            return decoder.read_boolean()
+        elif writers_schema.type == 'string':
+            return decoder.read_utf8()
+        elif writers_schema.type == 'int':
+            return decoder.read_int()
+        elif writers_schema.type == 'long':
+            return decoder.read_long()
+        elif writers_schema.type == 'float':
+            return decoder.read_float()
+        elif writers_schema.type == 'double':
+            return decoder.read_double()
+        elif writers_schema.type == 'bytes':
+            return decoder.read_bytes()
+        elif writers_schema.type == 'fixed':
             return self.read_fixed(writers_schema, readers_schema, decoder)
         elif writers_schema.type == 'enum':
             return self.read_enum(writers_schema, readers_schema, decoder)
@@ -603,7 +587,6 @@ class DatumWriter(object):
         # validate datum
         if not validate(self.writers_schema, datum):
             raise AvroTypeException(self.writers_schema, datum)
-        
         self.write_data(self.writers_schema, datum, encoder)
 
     def write_data(self, writers_schema, datum, encoder):
