@@ -46,6 +46,7 @@ try:
 except ImportError:
     import simplejson as json
 
+from schema_resolve import resolve
 #
 # Constants
 #
@@ -80,25 +81,7 @@ STRUCT_CRC32 = struct_class('>I')     # big-endian unsigned int
 # Exceptions
 #
 
-
-class AvroTypeException(schema.AvroException):
-    """Raised when datum is not an example of schema."""
-    def __init__(self, expected_schema, datum):
-        pretty_expected = json.dumps(json.loads(str(expected_schema)), indent=2)
-        fail_msg = "The datum %s is not an example of the schema %s"\
-                             % (datum, pretty_expected)
-        schema.AvroException.__init__(self, fail_msg)
-
-
-class SchemaResolutionException(schema.AvroException):
-    def __init__(self, fail_msg, writers_schema=None, readers_schema=None):
-        pretty_writers = json.dumps(json.loads(str(writers_schema)), indent=2)
-        pretty_readers = json.dumps(json.loads(str(readers_schema)), indent=2)
-        if writers_schema:
-            fail_msg += "\nWriter's Schema: %s" % pretty_writers
-        if readers_schema:
-            fail_msg += "\nReader's Schema: %s" % pretty_readers
-        schema.AvroException.__init__(self, fail_msg)
+from exceptions import AvroTypeException, SchemaResolutionException
 
 #
 # Validate
@@ -151,7 +134,6 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
 try:
-        # raise ImportError("Ooops")
         from fast_binary import BinaryDecoder #, BinaryEncoder
         from fast_binary import get_reader
         log.warn("Using fast C extension")
@@ -225,6 +207,8 @@ class DatumReader(object):
         in the data the "writer's schema", and the schema expected by the
         reader the "reader's schema".
         """
+        if readers_schema:
+            self.readers_schema = readers_schema
         if writers_schema:
             self.writers_schema = writers_schema
         if readers_schema:
@@ -241,12 +225,14 @@ class DatumReader(object):
         self._writers_schema = parsed_schema
         # to_json is a terrible method name for something
         # that returns a python dict! :/
-        schema_dict = parsed_schema.to_json()
+        schema_dict = resolved_schema = parsed_schema.to_json()
         # create the reader function from the schema
-        self.read_datum = get_reader(schema_dict)
-
-        if not hasattr(self, 'readers_schema'):
+        if hasattr(self, 'readers_schema'):
+            resolved_schema = resolve(schema_dict, self.readers_schema.to_json())
+            print resolved_schema
+        else:
             self.readers_schema = parsed_schema
+        self.read_datum = get_reader(resolved_schema)
 
         # schema matching
         if not DatumReader.match_schemas(self.writers_schema, self.readers_schema):

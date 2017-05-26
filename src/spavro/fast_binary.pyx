@@ -97,9 +97,9 @@ def read_utf8(fo):
 
 # ======================================================================
 from collections import namedtuple
-Field = namedtuple('Field', ['name', 'reader'])
+Field = namedtuple('Field', ['name', 'reader', 'skip'])
 
-cdef unicode get_type(schema):
+cpdef unicode get_type(schema):
     if isinstance(schema, list):
         return u"union"
     elif isinstance(schema, dict):
@@ -120,10 +120,10 @@ def make_union_reader(union_schema):
 
 
 def make_record_reader(schema):
-    cdef list fields = [Field(field['name'], get_reader(field['type'])) for field in schema['fields']]
+    cdef list fields = [Field(field['name'], get_reader(field['type']), get_type(field['type']) == 'skip') for field in schema['fields']]
 
     def record_reader(fo):
-        return {field.name: field.reader(fo) for field in fields}
+        return {field.name: field.reader(fo) for field in fields if not (field.skip and field.reader(fo) is None)}
     return record_reader
 
 
@@ -195,6 +195,24 @@ def make_byte_reader(schema):
 def make_float_reader(schema):
     return read_float
 
+
+def make_skip_reader(schema):
+    # this will create a regular reader that will iterate the bytes
+    # in the avro stream properly
+    value_reader = get_reader(schema['value'])
+    def read_skip(fo):
+        value_reader(fo)
+        return None
+    return read_skip
+
+
+def make_default_reader(schema):
+    value = schema["value"]
+    def read_default(fo):
+        return value
+    return read_default
+
+
 type_map = {
     'union': make_union_reader,
     'record': make_record_reader,
@@ -209,7 +227,9 @@ type_map = {
     'fixed': make_fixed_reader,
     'enum': make_enum_reader,
     'array': make_array_reader,
-    'map': make_map_reader
+    'map': make_map_reader,
+    'skip': make_skip_reader,
+    'default': make_default_reader
 }
 
 schema_cache = {}
@@ -219,24 +239,30 @@ class Placeholder(object):
         self.reader = None
 
     def __call__(self, fo):
-        self.reader(fo)
+        return self.reader(fo)
 
 def get_reader(schema):
     cdef unicode schema_type = get_type(schema)
-    if schema_type == u'record':
+    if schema_type in ('record', 'fixed'):
         placeholder = Placeholder()
         # using a placeholder because this is recursive and the reader isn't defined
         # yet and nested records might refer to this parent schema name
-        schema_cache[schema['name']] = placeholder
+        namespace = schema.get('namespace')
+        record_name = schema.get('name')
+        if namespace:
+           namspace_record_name = '.'.join([namespace, record_name])
+        else:
+            namspace_record_name = record_name
+        schema_cache[namspace_record_name] = placeholder
         reader = type_map[schema_type](schema)
         # now that we've returned, assign the reader to the placeholder
         # so that the execution will work
         placeholder.reader = reader
-    else:
-        try:
-            reader = type_map[schema_type](schema)
-        except KeyError:
-            reader = schema_cache[schema_type]
+        return reader
+    try:
+        reader = type_map[schema_type](schema)
+    except KeyError:
+        reader = schema_cache[schema_type]
 
     return reader
 
