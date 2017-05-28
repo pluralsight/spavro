@@ -209,7 +209,7 @@ def main(argv=None):
     argv = argv or sys.argv
 
     parser = OptionParser(description="Display/write for Avro files",
-                      version="@AVRO_VERSION@",
+                      version="1.8.1",
                       usage="usage: %prog cat|write [options] FILE [FILE...]")
     # cat options
 

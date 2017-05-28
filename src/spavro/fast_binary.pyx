@@ -1,45 +1,21 @@
-# from libc.stdio cimport printf
+'''Fast Cython extension for reading / writing and validating AVRO records.
 
-import sys
-import struct
-from binascii import crc32
-from spavro import schema
+The main edge this code has is that it parses the schema only once and creates
+a reader/writer call tree from the schema shape. All reads and writes then
+no longer consult the schema saving lookups.'''
 
-# TODO(hammer): shouldn't ! be < for little-endian (according to spec?)
-if sys.version_info >= (2, 5, 0):
-    struct_class = struct.Struct
-else:
-    class SimpleStruct(object):
-        def __init__(self, format):
-            self.format = format
-
-        def pack(self, *args):
-            return struct.pack(self.format, *args)
-
-        def unpack(self, *args):
-            return struct.unpack(self.format, *args)
-    struct_class = SimpleStruct
-
-STRUCT_INT = struct_class('!I')         # big-endian unsigned int
-STRUCT_LONG = struct_class('!Q')        # big-endian unsigned long long
-STRUCT_FLOAT = struct_class('!f')     # big-endian float
-STRUCT_DOUBLE = struct_class('!d')    # big-endian double
-STRUCT_CRC32 = struct_class('>I')     # big-endian unsigned int
-
-
-def read_long(fo):
+cdef long read_long(fo):
     '''Read a long using zig-zag binary encoding'''
     cdef:
         unsigned long long accum
         int temp_datum
         char* c_raw
         long long result
-        int shift
+        int shift = 7
     raw = fo.read(1)
     c_raw = raw
     temp_datum = <int>c_raw[0]
     accum = temp_datum & 0x7F
-    shift = 7
     while (temp_datum & 0x80) != 0:
         raw = fo.read(1)
         c_raw = raw
@@ -49,12 +25,12 @@ def read_long(fo):
     result = (accum >> 1) ^ -(accum & 1)
     return result
 
-def read_bytes(fo):
+cdef bytes read_bytes(fo):
     '''Bytes are a marker for length of bytes and then binary data'''
     return fo.read(read_long(fo))
 
 
-def read_null(fo):
+cdef read_null(fo):
     """
     null is written as zero bytes
     """
@@ -68,7 +44,7 @@ def read_boolean(fo):
     """
     return fo.read(1) == b'\x01'
 
-def read_float(fo):
+cdef float read_float(fo):
     """
     A float is written as 4 bytes.
     The float is converted into a 32-bit integer using a method equivalent to
@@ -78,7 +54,7 @@ def read_float(fo):
     cdef char* y = data
     return (<float*>y)[0]
 
-def read_double(fo):
+cdef double read_double(fo):
     """
     A double is written as 8 bytes.
     The double is converted into a 64-bit integer using a method equivalent to
@@ -88,16 +64,18 @@ def read_double(fo):
     cdef char* y = data
     return (<double*>y)[0]
 
-def read_utf8(fo):
+cdef unicode read_utf8(fo):
     """
     A string is encoded as a long followed by
     that many bytes of UTF-8 encoded character data.
     """
-    return unicode(read_bytes(fo), "utf-8")
+    byte_data = read_bytes(fo)
+    return unicode(byte_data, "utf-8")
 
 # ======================================================================
 from collections import namedtuple
-Field = namedtuple('Field', ['name', 'reader', 'skip'])
+ReadField = namedtuple('ReadField', ['name', 'reader', 'skip'])
+WriteField = namedtuple('WriteField', ['name', 'writer'])
 
 cpdef unicode get_type(schema):
     if isinstance(schema, list):
@@ -120,7 +98,7 @@ def make_union_reader(union_schema):
 
 
 def make_record_reader(schema):
-    cdef list fields = [Field(field['name'], get_reader(field['type']), get_type(field['type']) == 'skip') for field in schema['fields']]
+    cdef list fields = [ReadField(field['name'], get_reader(field['type']), get_type(field['type']) == 'skip') for field in schema['fields']]
 
     def record_reader(fo):
         return {field.name: field.reader(fo) for field in fields if not (field.skip and field.reader(fo) is None)}
@@ -160,7 +138,7 @@ def make_map_reader(schema):
             if block_count < 0:
                 block_count = -block_count
                 block_size = read_long(fo)
-            for i in range(block_count):
+            for _ in range(block_count):
                 key = read_utf8(fo)
                 read_items[key] = value_reader(fo)
             block_count = read_long(fo)
@@ -213,7 +191,7 @@ def make_default_reader(schema):
     return read_default
 
 
-type_map = {
+reader_type_map = {
     'union': make_union_reader,
     'record': make_record_reader,
     'null': make_null_reader,
@@ -234,7 +212,7 @@ type_map = {
 
 schema_cache = {}
 
-class Placeholder(object):
+class ReaderPlaceholder(object):
     def __init__(self):
         self.reader = None
 
@@ -244,7 +222,7 @@ class Placeholder(object):
 def get_reader(schema):
     cdef unicode schema_type = get_type(schema)
     if schema_type in ('record', 'fixed'):
-        placeholder = Placeholder()
+        placeholder = ReaderPlaceholder()
         # using a placeholder because this is recursive and the reader isn't defined
         # yet and nested records might refer to this parent schema name
         namespace = schema.get('namespace')
@@ -254,13 +232,13 @@ def get_reader(schema):
         else:
             namspace_record_name = record_name
         schema_cache[namspace_record_name] = placeholder
-        reader = type_map[schema_type](schema)
+        reader = reader_type_map[schema_type](schema)
         # now that we've returned, assign the reader to the placeholder
         # so that the execution will work
         placeholder.reader = reader
         return reader
     try:
-        reader = type_map[schema_type](schema)
+        reader = reader_type_map[schema_type](schema)
     except KeyError:
         reader = schema_cache[schema_type]
 
@@ -269,220 +247,341 @@ def get_reader(schema):
 # ======================================================================
 
 
-class BinaryDecoder(object):
-    """Read leaf values."""
-    def __init__(self, reader):
-        """
-        reader is a Python object on which we can call read, seek, and tell.
-        """
-        self.reader = reader
+cdef void write_int(outbuf, long long signed_datum):
+    """int and long values are written using variable-length, zig-zag coding.
+    """
+    cdef:
+        unsigned long long datum
+        char temp_datum
+    datum = (signed_datum << 1) ^ (signed_datum >> 63)
+    while datum > 127:
+        temp_datum = (datum & 0x7f) | 0x80
+        outbuf.write((<char *>&temp_datum)[:sizeof(char)])
+        datum >>= 7
+    outbuf.write((<char *>&datum)[:sizeof(char)])
 
-    # # read-only properties
-    # reader = property(lambda self: self._reader)
-
-    def read(self, n):
-        """
-        Read n bytes.
-        """
-        return self.reader.read(n)
-
-    def read_null(self):
-        """
-        null is written as zero bytes
-        """
-        return None
-
-    def read_boolean(self):
-        """
-        a boolean is written as a single byte 
-        whose value is either 0 (false) or 1 (true).
-        """
-        return self.reader.read(1) == b'\x01'
-
-    def read_long(self):
-        """
-        int and long values are written using variable-length, zig-zag coding.
-        """
-        cdef:
-            unsigned long long accum
-            int temp_datum
-            char* c_raw
-            long long result
-            int shift
-        raw = self.reader.read(1)
-        c_raw = raw
-        temp_datum = <int>c_raw[0]
-        accum = temp_datum & 0x7F
-        shift = 7
-        while (temp_datum & 0x80) != 0:
-            raw = self.reader.read(1)
-            c_raw = raw
-            temp_datum = <int>c_raw[0]
-            accum |= (temp_datum & 0x7F) << shift
-            shift += 7
-        result = (accum >> 1) ^ -(accum & 1)
-        return result
-
-    read_int = read_long
-
-    def read_float(self):
-        """
-        A float is written as 4 bytes.
-        The float is converted into a 32-bit integer using a method equivalent to
-        Java's floatToIntBits and then encoded in little-endian format.
-        """
-        data = self.reader.read(4)
-        cdef char* y = data
-        return (<float*>y)[0]
-
-    def read_double(self):
-        """
-        A double is written as 8 bytes.
-        The double is converted into a 64-bit integer using a method equivalent to
-        Java's doubleToLongBits and then encoded in little-endian format.
-        """
-        data = self.reader.read(8)
-        cdef char* y = data
-        return (<double*>y)[0]
+write_long = write_int
 
 
-    def read_bytes(self):
-        """
-        Bytes are encoded as a long followed by that many bytes of data. 
-        """
-        return self.reader.read(self.read_long())
-
-    def read_utf8(self):
-        """
-        A string is encoded as a long followed by
-        that many bytes of UTF-8 encoded character data.
-        """
-        return unicode(self.read_bytes(), "utf-8")
-
-    def check_crc32(self, bytes):
-        checksum = STRUCT_CRC32.unpack(self.read(4))[0];
-        if crc32(bytes) & 0xffffffff != checksum:
-            raise schema.AvroException("Checksum failure")
-
-    def skip_null(self):
-        pass
-
-    def skip_boolean(self):
-        self.skip(1)
-
-    def skip_int(self):
-        self.skip_long()
-
-    def skip_long(self):
-        b = ord(self.read(1))
-        while (b & 0x80) != 0:
-            b = ord(self.read(1))
-
-    def skip_float(self):
-        self.skip(4)
-
-    def skip_double(self):
-        self.skip(8)
-
-    def skip_bytes(self):
-        self.skip(self.read_long())
-
-    def skip_utf8(self):
-        self.skip_bytes()
-
-    def skip(self, n):
-        self.reader.seek(self.reader.tell() + n)
+cdef void write_bytes(outbuf, char* datum):
+    """
+    Bytes are encoded as a long followed by that many bytes of data. 
+    """
+    cdef long byte_count = len(datum)
+    write_long(outbuf, byte_count)
+    outbuf.write(datum)
 
 
-class BinaryEncoder(object):
-    """Write leaf values."""
-    def __init__(self, writer):
-        """
-        writer is a Python object on which we can call write.
-        """
-        self.writer = writer
+cdef void write_utf8(outbuf, datum):
+    """
+    Bytes are encoded as a long followed by that many bytes of data.
+    """
+    write_bytes(outbuf, datum.encode("utf-8"))
 
-    # read-only properties
-    # writer = property(lambda self: self._writer)
 
-    def write(self, datum):
-        """Write an abritrary datum."""
-        self.writer.write(datum)
+cdef void write_float(outbuf, float datum):
+    """
+    A float is written as 4 bytes.
+    The float is converted into a 32-bit integer using a method equivalent to
+    Java's floatToIntBits and then encoded in little-endian format.
+    """
+    outbuf.write((<char *>&datum)[:sizeof(float)])
 
-    def write_null(self, datum):
-        """
-        null is written as zero bytes
-        """
-        pass
 
-    def write_boolean(self, char datum):
-        """
-        a boolean is written as a single byte 
-        whose value is either 0 (false) or 1 (true).
-        """
-        cdef char x = 1 if datum else 0
-        self.writer.write((<char *>&x)[:sizeof(char)])
+cdef void write_double(outbuf, double datum):
+    """
+    A double is written as 8 bytes.
+    The double is converted into a 64-bit integer using a method equivalent to
+    Java's doubleToLongBits and then encoded in little-endian format.
+    """
+    outbuf.write((<char *>&datum)[:sizeof(double)])
 
-    def write_int(self, long long signed_datum):
-        """int and long values are written using variable-length, zig-zag coding.
-        """
-        cdef:
-            unsigned long long datum
-            char temp_datum
-        datum = (signed_datum << 1) ^ (signed_datum >> 63)
-        while datum > 127:
-            temp_datum = (datum & 0x7f) | 0x80
-            self.writer.write((<char *>&temp_datum)[:sizeof(char)])
-            datum >>= 7
-        self.writer.write((<char *>&datum)[:sizeof(char)])
 
-    write_long = write_int
+cdef void write_null(outbuf, datum):
+    pass
 
-    def write_float(self, float datum):
-        """
-        A float is written as 4 bytes.
-        The float is converted into a 32-bit integer using a method equivalent to
-        Java's floatToIntBits and then encoded in little-endian format.
-        """
-        self.writer.write((<char *>&datum)[:sizeof(float)])
 
-    def write_double(self, double datum):
-        """
-        A double is written as 8 bytes.
-        The double is converted into a 64-bit integer using a method equivalent to
-        Java's doubleToLongBits and then encoded in little-endian format.
-        """
-        self.writer.write((<char *>&datum)[:sizeof(double)])
-        # bits = STRUCT_LONG.unpack(STRUCT_DOUBLE.pack(datum))[0]
-        # self.write(chr((bits) & 0xFF))
-        # self.write(chr((bits >> 8) & 0xFF))
-        # self.write(chr((bits >> 16) & 0xFF))
-        # self.write(chr((bits >> 24) & 0xFF))
-        # self.write(chr((bits >> 32) & 0xFF))
-        # self.write(chr((bits >> 40) & 0xFF))
-        # self.write(chr((bits >> 48) & 0xFF))
-        # self.write(chr((bits >> 56) & 0xFF))
+cdef void write_fixed(outbuf, char* datum):
+    outbuf.write(datum)
 
-    def write_bytes(self, char* datum):
-        """
-        Bytes are encoded as a long followed by that many bytes of data. 
-        """
-        cdef:
-            long byte_count
-        byte_count = len(datum)
-        self.write_long(byte_count)
-        self.writer.write(datum)
 
-    def write_utf8(self, char* datum):
-        """
-        A string is encoded as a long followed by
-        that many bytes of UTF-8 encoded character data.
-        """
-        # datum = datum.encode("utf-8")
-        self.write_bytes(datum)
+def write_boolean(outbuf, char datum):
+    """A boolean is written as a single byte whose value is either 0 (false) or
+    1 (true)."""
+    cdef char x = 1 if datum else 0
+    outbuf.write((<char *>&x)[:sizeof(char)])
 
-    def write_crc32(self, bytes):
-        """
-        A 4-byte, big-endian CRC32 checksum
-        """
-        self.write(STRUCT_CRC32.pack(crc32(bytes) & 0xffffffff))
+
+py_to_avro = {
+    unicode: u'string',
+    str: u'string',
+    int: u'int',
+    long: u'long',
+    bool: u'boolean',
+    type(None): u'null',
+    float: u'double',
+    list: u'array',
+    dict: u'record'
+}
+
+# ===============================
+CheckField = namedtuple('CheckField', ['name', 'check'])
+
+def get_check(schema):
+    cdef unicode schema_type = get_type(schema)
+    return check_type_map[schema_type](schema)
+
+
+def make_record_check(schema):
+    cdef list fields = [CheckField(field['name'], get_check(field['type'])) for field in schema['fields']]
+    def record_check(datum):
+        return isinstance(datum, dict) and all([field.check(datum.get(field.name)) for field in fields])
+    return record_check
+
+
+def make_enum_check(schema):
+    cdef list symbols = schema['symbols']
+    def enum_check(datum):
+        return datum in symbols
+    return enum_check
+
+
+def make_null_check(schema):
+    return lambda datum: datum is None
+
+def check_string(datum):
+    return isinstance(datum, basestring)
+
+def make_string_check(schema):
+    return check_string
+
+def make_long_check(schema):
+    return lambda datum: isinstance(datum, int) or isinstance(datum, long)
+
+def make_boolean_check(schema):
+    return lambda datum: isinstance(datum, bool)
+
+# def make_boolean_check(schema):
+#     return lambda datum: isinstance(datum, boolean)
+
+def make_float_check(schema):
+    return lambda datum: isinstance(datum, int) or isinstance(datum, long) or isinstance(datum, float)
+
+def make_double_check(schema):
+    return lambda datum: isinstance(datum, int) or isinstance(datum, long) or isinstance(datum, float)
+
+def make_byte_check(schema):
+    return lambda datum: isinstance(datum, str) or isinstance(datum, bytes)
+
+def make_array_check(schema):
+    item_check = get_check(schema['items'])
+    def array_check(datum):
+        return all([item_check(item) for item in datum])
+    return array_check
+
+def make_union_check(union_schema):
+    cdef list union_checks = [get_check(schema) for schema in union_schema]
+    def union_check(datum):
+        return any([check(datum) for check in union_checks])
+    return union_check
+
+def make_fixed_check(schema):
+    cdef int size = schema['size']
+    def fixed_check(datum):
+        return (isinstance(datum, str) or isinstance(datum, bytes)) and len(datum) == size
+    return fixed_check
+
+def make_map_check(schema):
+    map_value_check = get_check(schema['values'])
+    def map_check(datum):
+        return isinstance(datum, dict) and all([check_string(key) and map_value_check(value) for key, value in datum.items()])
+    return map_check
+
+check_type_map = {
+    'union': make_union_check,
+    'record': make_record_check,
+    'null': make_null_check,
+    'string': make_string_check,
+    'boolean': make_boolean_check,
+    'double': make_double_check,
+    'float': make_float_check,
+    'long': make_long_check,
+    'bytes': make_byte_check,
+    'int': make_long_check,
+    'fixed': make_fixed_check,
+    'enum': make_enum_check,
+    'array': make_array_check,
+    'map': make_map_check
+}
+
+# ====================
+
+def make_union_writer(union_schema):
+    cdef list type_list = [get_type(schema) for schema in union_schema]
+    # cdef dict writer_lookup
+    cdef list record_list
+
+    simple_union = not(type_list.count('record') > 1 or len(set(type_list) & set(['string', 'enum', 'fixed'])) > 1
+                       or len(set(type_list) & set(['record', 'map'])) > 1)
+
+    if simple_union:
+        # enums fixed and string all have the same python data type
+        # if there's only one kind in the union, use that kind
+        simple_remap = {'enum': 'string',
+                        'fixed': 'string',
+                        'string': 'string',
+                        'record': 'record',
+                        'map': 'record'}
+        def simple_writer_lookup(datum):
+            cdef:
+                long idx
+                unicode data_type
+            writer_lookup_dict = {simple_remap.get(get_type(schema), get_type(schema)): (idx, get_writer(schema)) for idx, schema in enumerate(union_schema)}
+            data_type = py_to_avro[type(datum)]
+            return writer_lookup_dict[data_type]
+        writer_lookup = simple_writer_lookup
+    else:
+        complex_lookup = [(get_check(schema), get_writer(schema)) for schema in union_schema]
+        def complex_writer_lookup(datum):
+            cdef:
+                long idx
+                unicode data_type
+            writer_lookup_dict = {get_type(schema): (idx, get_writer(schema)) for idx, schema in enumerate(union_schema)}
+            data_type = py_to_avro[type(datum)]
+            if data_type in ('string', 'enum', 'fixed', 'record', 'map'):
+                for idx, (check, writer) in enumerate(complex_lookup):
+                    if check(datum):
+                        return idx, writer
+                else:
+                    raise TypeError("No schema match")
+            else:
+                return writer_lookup_dict[data_type]
+        writer_lookup = complex_writer_lookup
+
+    def write_union(outbuf, datum):
+        idx, data_writer = writer_lookup(datum)
+        write_long(outbuf, idx)
+        data_writer(outbuf, datum)
+    return write_union
+
+def make_enum_writer(schema):
+    cdef list symbols = schema['symbols']
+
+    def write_enum(outbuf, char* datum):
+        cdef int enum_index = symbols.index(datum)
+        write_int(outbuf, enum_index)
+    return write_enum
+
+
+def make_record_writer(schema):
+    cdef list fields = [WriteField(field['name'], get_writer(field['type'])) for field in schema['fields']]
+
+    def write_record(outbuf, datum):
+        for field in fields:
+            field.writer(outbuf, datum.get(field.name))
+    return write_record
+
+
+def make_array_writer(schema):
+    item_writer = get_writer(schema['items'])
+
+    def write_array(outbuf, list datum):
+        cdef long item_count = len(datum)
+        if item_count > 0:
+            write_long(outbuf, item_count)
+        for item in datum:
+            item_writer(outbuf, item)
+        write_long(outbuf, 0)
+    return write_array
+
+
+def make_map_writer(schema):
+    map_value_writer = get_writer(schema['values'])
+
+    def write_map(outbuf, datum):
+        cdef long item_count = len(datum)
+        if item_count > 0:
+            write_long(outbuf, item_count)
+        for key, val in datum.iteritems():
+            write_utf8(outbuf, key)
+            map_value_writer(outbuf, val)
+        write_long(outbuf, 0)
+    return write_map
+
+
+def make_boolean_writer(schema):
+    return write_boolean
+
+def make_fixed_writer(schema):
+    return write_fixed
+
+def make_long_writer(schema):
+    return write_long
+
+def make_string_writer(schema):
+    return write_utf8
+
+def make_byte_writer(schema):
+    return write_bytes
+
+def make_float_writer(schema):
+    return write_float
+
+def make_double_writer(schema):
+    return write_double
+
+def make_null_writer(schema):
+    return write_null
+
+
+# writer
+writer_type_map = {
+    'union': make_union_writer,
+    'record': make_record_writer,
+    'null': make_null_writer,
+    'string': make_string_writer,
+    'boolean': make_boolean_writer,
+    'double': make_double_writer,
+    'float': make_float_writer,
+    'long': make_long_writer,
+    'bytes': make_byte_writer,
+    'int': make_long_writer,
+    'fixed': make_fixed_writer,
+    'enum': make_enum_writer,
+    'array': make_array_writer,
+    'map': make_map_writer
+}
+
+
+class WriterPlaceholder(object):
+    def __init__(self):
+        self.writer = None
+
+    def __call__(self, fo, val):
+        return self.writer(fo, val)
+
+
+def get_writer(schema):
+    cdef unicode schema_type = get_type(schema)
+    if schema_type in ('record', 'fixed', 'enum'):
+        placeholder = WriterPlaceholder()
+        # using a placeholder because this is recursive and the reader isn't defined
+        # yet and nested records might refer to this parent schema name
+        namespace = schema.get('namespace')
+        name = schema.get('name')
+        if namespace:
+           fullname = '.'.join([namespace, name])
+        else:
+            fullname = name
+        schema_cache[fullname] = placeholder
+        writer = writer_type_map[schema_type](schema)
+        # now that we've returned, assign the reader to the placeholder
+        # so that the execution will work
+        placeholder.writer = writer
+        return writer
+    try:
+        writer = writer_type_map[schema_type](schema)
+    except KeyError:
+        writer = schema_cache[schema_type]
+
+    return writer

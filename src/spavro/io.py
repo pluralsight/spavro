@@ -133,21 +133,22 @@ def validate(expected_schema, datum):
 import logging
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
+use_fast = False
 try:
-        from fast_binary import BinaryDecoder #, BinaryEncoder
-        from fast_binary import get_reader
-        log.warn("Using fast C extension")
+        # raise ImportError("Force off")
+        from fast_binary import get_reader, get_writer
+        log.info("Using fast C extension")
+        use_fast = True
 except ImportError:
-        from binary import BinaryEncoder, BinaryDecoder
+        # from binary import BinaryEncoder, BinaryDecoder
         log.warn("Failed to load spavro C extension")
-
-from binary import BinaryEncoder
+from binary import BinaryEncoder, BinaryDecoder
 
 #
-# DatumReader/Writer
+# SlowDatumReader/Writer
 #
 
-class DatumReader(object):
+class SlowDatumReader(object):
     """Deserialize Avro-encoded data into a Python data structure."""
     @staticmethod
     def check_props(schema_one, schema_two, prop_list):
@@ -166,32 +167,32 @@ class DatumReader(object):
                     and w_type == r_type):
             return True
         elif (w_type == r_type == 'record' and
-                    DatumReader.check_props(writers_schema, readers_schema,
+                    SlowDatumReader.check_props(writers_schema, readers_schema, 
                                                                     ['fullname'])):
             return True
         elif (w_type == r_type == 'error' and
-                    DatumReader.check_props(writers_schema, readers_schema,
+                    SlowDatumReader.check_props(writers_schema, readers_schema, 
                                                                     ['fullname'])):
             return True
         elif (w_type == r_type == 'request'):
             return True
-        elif (w_type == r_type == 'fixed' and
-                    DatumReader.check_props(writers_schema, readers_schema,
+        elif (w_type == r_type == 'fixed' and 
+                    SlowDatumReader.check_props(writers_schema, readers_schema, 
                                                                     ['fullname', 'size'])):
             return True
-        elif (w_type == r_type == 'enum' and
-                    DatumReader.check_props(writers_schema, readers_schema,
+        elif (w_type == r_type == 'enum' and 
+                    SlowDatumReader.check_props(writers_schema, readers_schema, 
                                                                     ['fullname'])):
             return True
-        elif (w_type == r_type == 'map' and
-                    DatumReader.check_props(writers_schema.values,
+        elif (w_type == r_type == 'map' and 
+                    SlowDatumReader.check_props(writers_schema.values,
                                                                     readers_schema.values, ['type'])):
             return True
-        elif (w_type == r_type == 'array' and
-                    DatumReader.check_props(writers_schema.items,
+        elif (w_type == r_type == 'array' and 
+                    SlowDatumReader.check_props(writers_schema.items,
                                                                     readers_schema.items, ['type'])):
             return True
-
+        
         # Handle schema promotion
         if w_type == 'int' and r_type in ['long', 'float', 'double']:
             return True
@@ -207,51 +208,27 @@ class DatumReader(object):
         in the data the "writer's schema", and the schema expected by the
         reader the "reader's schema".
         """
-        if readers_schema:
-            self.readers_schema = readers_schema
-        if writers_schema:
-            self.writers_schema = writers_schema
-        if readers_schema:
-            self.readers_schema = readers_schema
-        if writers_schema and not readers_schema:
-            self.readers_schema = writers_schema
+        self._writers_schema = writers_schema
+        self._readers_schema = readers_schema 
 
-    @property
-    def writers_schema(self):
-        return self._writers_schema
-
-    @writers_schema.setter
-    def writers_schema(self, parsed_schema):
-        self._writers_schema = parsed_schema
-        # to_json is a terrible method name for something
-        # that returns a python dict! :/
-        schema_dict = resolved_schema = parsed_schema.to_json()
-        # create the reader function from the schema
-        if hasattr(self, 'readers_schema'):
-            resolved_schema = resolve(schema_dict, self.readers_schema.to_json())
-            print resolved_schema
-        else:
-            self.readers_schema = parsed_schema
-        self.read_datum = get_reader(resolved_schema)
-
-        # schema matching
-        if not DatumReader.match_schemas(self.writers_schema, self.readers_schema):
-            fail_msg = 'Schemas do not match.'
-            raise SchemaResolutionException(fail_msg, self.writers_schema, self.readers_schema)
-
+    # read/write properties
+    def set_writers_schema(self, writers_schema):
+        self._writers_schema = writers_schema
+    writers_schema = property(lambda self: self._writers_schema,
+                                                        set_writers_schema)
+    def set_readers_schema(self, readers_schema):
+        self._readers_schema = readers_schema
+    readers_schema = property(lambda self: self._readers_schema,
+                                                        set_readers_schema)
+    
     def read(self, decoder):
-        # keeping the API the same, we wrap the read_datum in read
-        # and pass the underlying file object to the read_datum function
-        return self.read_datum(decoder.reader)
-
-    def xread(self, decoder):
         if self.readers_schema is None:
             self.readers_schema = self.writers_schema
         return self.read_data(self.writers_schema, self.readers_schema, decoder)
 
     def read_data(self, writers_schema, readers_schema, decoder):
         # schema matching
-        if not DatumReader.match_schemas(writers_schema, readers_schema):
+        if not SlowDatumReader.match_schemas(writers_schema, readers_schema):
             fail_msg = 'Schemas do not match.'
             raise SchemaResolutionException(fail_msg, writers_schema, readers_schema)
 
@@ -259,7 +236,7 @@ class DatumReader(object):
         if (writers_schema.type not in ['union', 'error_union']
                 and readers_schema.type in ['union', 'error_union']):
             for s in readers_schema.schemas:
-                if DatumReader.match_schemas(writers_schema, s):
+                if SlowDatumReader.match_schemas(writers_schema, s):
                     return self.read_data(writers_schema, s, decoder)
             fail_msg = 'Schemas do not match.'
             raise SchemaResolutionException(fail_msg, writers_schema, readers_schema)
@@ -335,7 +312,9 @@ class DatumReader(object):
         Fixed instances are encoded using the number of bytes declared
         in the schema.
         """
-        return decoder.read(writers_schema.size)
+        data_bytes = decoder.read(writers_schema.size)
+        print(repr(data_bytes))
+        return data_bytes
 
     def skip_fixed(self, writers_schema, decoder):
         return decoder.skip(writers_schema.size)
@@ -425,7 +404,7 @@ class DatumReader(object):
             for i in range(block_count):
                 key = decoder.read_utf8()
                 read_items[key] = self.read_data(writers_schema.values,
-                                                                                 readers_schema.values, decoder)
+                                                        readers_schema.values, decoder)
             block_count = decoder.read_long()
         return read_items
 
@@ -454,7 +433,7 @@ class DatumReader(object):
                                  % (index_of_schema, len(writers_schema.schemas))
             raise SchemaResolutionException(fail_msg, writers_schema, readers_schema)
         selected_writers_schema = writers_schema.schemas[index_of_schema]
-
+        
         # read data
         return self.read_data(selected_writers_schema, readers_schema, decoder)
 
@@ -558,8 +537,8 @@ class DatumReader(object):
             raise schema.AvroException(fail_msg)
 
 
-class DatumWriter(object):
-    """DatumWriter for generic python objects."""
+class SlowDatumWriter(object):
+    """SlowDatumWriter for generic python objects."""
     def __init__(self, writers_schema=None):
         self._writers_schema = writers_schema
 
@@ -693,3 +672,162 @@ class DatumWriter(object):
         """
         for field in writers_schema.fields:
             self.write_data(field.type, datum.get(field.name), encoder)
+
+# ===================
+
+
+class FastDatumReader(object):
+    """Deserialize Avro-encoded data into a Python data structure, Fast Version.
+
+    Uses the new fast avro C extension but maintains the old API.
+    """
+    @staticmethod
+    def check_props(schema_one, schema_two, prop_list):
+        for prop in prop_list:
+            if getattr(schema_one, prop) != getattr(schema_two, prop):
+                return False
+        return True
+
+    @staticmethod
+    def match_schemas(writers_schema, readers_schema):
+        w_type = writers_schema.type
+        r_type = readers_schema.type
+        if 'union' in [w_type, r_type] or 'error_union' in [w_type, r_type]:
+            return True
+        elif (w_type in schema.PRIMITIVE_TYPES and r_type in schema.PRIMITIVE_TYPES
+                    and w_type == r_type):
+            return True
+        elif (w_type == r_type == 'record' and
+                    FastDatumReader.check_props(writers_schema, readers_schema,
+                                                                    ['fullname'])):
+            return True
+        elif (w_type == r_type == 'error' and
+                    FastDatumReader.check_props(writers_schema, readers_schema,
+                                                                    ['fullname'])):
+            return True
+        elif (w_type == r_type == 'request'):
+            return True
+        elif (w_type == r_type == 'fixed' and
+                    FastDatumReader.check_props(writers_schema, readers_schema,
+                                                                    ['fullname', 'size'])):
+            return True
+        elif (w_type == r_type == 'enum' and
+                    FastDatumReader.check_props(writers_schema, readers_schema,
+                                                                    ['fullname'])):
+            return True
+        elif (w_type == r_type == 'map' and
+                    FastDatumReader.check_props(writers_schema.values,
+                                                                    readers_schema.values, ['type'])):
+            return True
+        elif (w_type == r_type == 'array' and
+                    FastDatumReader.check_props(writers_schema.items,
+                                                                    readers_schema.items, ['type'])):
+            return True
+
+        # Handle schema promotion
+        if w_type == 'int' and r_type in ['long', 'float', 'double']:
+            return True
+        elif w_type == 'long' and r_type in ['float', 'double']:
+            return True
+        elif w_type == 'float' and r_type == 'double':
+            return True
+        return False
+
+    def __init__(self, writers_schema=None, readers_schema=None):
+        """
+        As defined in the Avro specification, we call the schema encoded
+        in the data the "writer's schema", and the schema expected by the
+        reader the "reader's schema".
+        """
+        self.schema_cache = {}
+        if readers_schema:
+            self.readers_schema = readers_schema
+        if writers_schema:
+            self.writers_schema = writers_schema
+        if writers_schema and not readers_schema:
+            self.readers_schema = writers_schema
+
+    @property
+    def writers_schema(self):
+        return self._writers_schema
+
+    @writers_schema.setter
+    def writers_schema(self, parsed_writer_schema):
+        '''Take a wrtiers schema object from the old avro API and run validation
+        and schema reolution (if applicable)
+
+        Since the old API would set this after object construction, we hook
+        here so we can run schema validation and resolution once on assignment.
+        This also makes the reader function for the resolved schema and uses
+        that for data reading.
+        '''
+        self._writers_schema = parsed_writer_schema
+
+        # create the reader function from the schema
+        if hasattr(self, 'readers_schema'):
+            # to_json is a terrible method name for something
+            # that returns a python dict! :/
+            resolved_schema = resolve(parsed_writer_schema.to_json(), self.readers_schema.to_json())
+        else:
+            # if no reader schema, then the resolved schema is just the writers
+            # schema
+            resolved_schema = parsed_writer_schema.to_json()
+            self.readers_schema = parsed_writer_schema
+        self.read_datum = get_reader(resolved_schema)
+
+        # schema matching
+        if not FastDatumReader.match_schemas(self.writers_schema, self.readers_schema):
+            fail_msg = 'Schemas do not match.'
+            raise SchemaResolutionException(fail_msg, self.writers_schema, self.readers_schema)
+
+    def read(self, decoder):
+        # keeping the API the same, we wrap the read_datum in read
+        # and pass the underlying file object to the read_datum function
+        return self.read_datum(decoder.reader)
+
+    def read_data(self, writers_schema, readers_schema, decoder):
+        resolved_schema = resolve(writers_schema.to_json(), readers_schema.to_json())
+        # try:
+        #     datum_reader = self.schema_cache[str(schema)]
+        # except KeyError:
+        datum_reader = get_reader(resolved_schema)
+        # self.schema_cache[str(schema)] = datum_reader
+        return datum_reader(decoder.reader)
+
+
+class FastDatumWriter(object):
+    """FastDatumWriter for generic python objects."""
+    def __init__(self, writers_schema=None):
+        self.writers_schema = writers_schema
+        self.schema_cache = {}
+
+    @property
+    def writers_schema(self):
+        return self._writers_schema
+
+    @writers_schema.setter
+    def writers_schema(self, parsed_writer_schema):
+        self._writers_schema = parsed_writer_schema
+        if parsed_writer_schema:
+            # to_json is a terrible method name for something
+            # that returns a python dict! :/
+            self.write_datum = get_writer(parsed_writer_schema.to_json())
+
+    def write(self, datum, encoder):
+        # validate datum
+        self.write_datum(encoder.writer, datum)
+
+    def write_data(self, schema, datum, encoder):
+        try:
+            datum_writer = self.schema_cache[str(schema)]
+        except KeyError:
+            datum_writer = get_writer(schema.to_json())
+            self.schema_cache[str(schema)] = datum_writer
+        datum_writer(encoder.writer, datum)
+
+if use_fast:
+    DatumReader = FastDatumReader
+    DatumWriter = FastDatumWriter
+else:
+    DatumReader = SlowDatumReader
+    DatumWriter = SlowDatumWriter

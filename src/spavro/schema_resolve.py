@@ -14,6 +14,9 @@ def resolve_record(writer, reader):
     if writer['name'] != reader['name']:
         raise SchemaResolutionException("Schemas not compatible record names don't match")
     record_name = reader['name']
+    optional = {}
+    if "namespace" in writer and "namespace" in reader:
+        optional["namespace"] = reader["namespace"]
 
     writer_fields = [field['name'] for field in writer['fields']]
     reader_fields = [field['name'] for field in reader['fields']]
@@ -41,7 +44,9 @@ def resolve_record(writer, reader):
                 fields.append({"name": field['name'], "type": {"type": "default", "value": field['default']}})
             except KeyError:
                 raise SchemaResolutionException("Schemas not compatible, no default value for field in reader's record that's not present in writer's record")
-    return {"type": "record", "fields": fields}  # writer, reader
+    schema = {"type": "record", "fields": fields, "name": record_name}
+    schema.update(optional)
+    return schema
 
 
 primitive_types = ('null', 'boolean', 'int', 'long', 'float', 'double', 'bytes', 'string' )
@@ -61,6 +66,14 @@ def resolve_enum(writer, reader):
     if set(writer['symbols']) - set(reader['symbols']):
         raise SchemaResolutionException("Schemas not compatible, symbol in writer's enum not present in reader's enum")
     return {'type': 'enum', 'name': reader['name'], 'symbols': [symbol for symbol in writer['symbols']]}
+
+
+def resolve_fixed(writer, reader):
+    if writer['name'] != reader['name']:
+        raise SchemaResolutionException("Schemas not compatible, fixed names don't match")
+    # if writer['name'] != reader['name']:
+    #     raise SchemaResolutionException("Schemas not compatible, fixed names don't match")
+    return {key: value for key, value in writer.items()} # "type": "fixed", "name": reader["name"], }
 
 
 def resolve_union(writer, reader):
@@ -98,6 +111,8 @@ def resolve(writer, reader):
             return resolve_union(writer, reader)
         if reader_type == "record":
             return resolve_record(writer, reader)
+        if reader_type == "fixed":
+            return resolve_fixed(writer, reader)
     else:
         # see if we've 'upgraded' to a union
         if reader_type == 'union':

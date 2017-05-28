@@ -169,6 +169,7 @@ class TestCat(unittest.TestCase):
         out = self._run('--fields', 'first,last,age')
         assert json.loads(out[0]) == {'first': 'daffy', 'last': 'duck'}
 
+
 class TestWrite(unittest.TestCase):
     def setUp(self):
         self.json_file = tempfile() + ".json"
