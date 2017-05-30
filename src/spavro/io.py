@@ -137,12 +137,13 @@ use_fast = False
 try:
         # raise ImportError("Force off")
         from fast_binary import get_reader, get_writer
+        from fast_binary import FastBinaryEncoder, FastBinaryDecoder
         log.info("Using fast C extension")
         use_fast = True
 except ImportError:
         # from binary import BinaryEncoder, BinaryDecoder
         log.warn("Failed to load spavro C extension")
-from binary import BinaryEncoder, BinaryDecoder
+from binary import BinaryEncoder as SlowBinaryEncoder, BinaryDecoder as SlowBinaryDecoder
 
 #
 # SlowDatumReader/Writer
@@ -312,9 +313,7 @@ class SlowDatumReader(object):
         Fixed instances are encoded using the number of bytes declared
         in the schema.
         """
-        data_bytes = decoder.read(writers_schema.size)
-        print(repr(data_bytes))
-        return data_bytes
+        return decoder.read(writers_schema.size)
 
     def skip_fixed(self, writers_schema, decoder):
         return decoder.skip(writers_schema.size)
@@ -828,6 +827,10 @@ class FastDatumWriter(object):
 if use_fast:
     DatumReader = FastDatumReader
     DatumWriter = FastDatumWriter
+    BinaryEncoder = FastBinaryEncoder
+    BinaryDecoder = FastBinaryDecoder
 else:
     DatumReader = SlowDatumReader
     DatumWriter = SlowDatumWriter
+    BinaryEncoder = SlowBinaryEncoder
+    BinaryDecoder = SlowBinaryDecoder
