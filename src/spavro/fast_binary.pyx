@@ -301,7 +301,7 @@ cdef void write_null(outbuf, datum):
     pass
 
 
-cdef void write_fixed(outbuf, char* datum):
+cdef void write_fixed(outbuf, bytes datum):
     outbuf.write(datum)
 
 
@@ -585,3 +585,121 @@ def get_writer(schema):
         writer = schema_cache[schema_type]
 
     return writer
+
+
+
+
+
+import struct
+from binascii import crc32
+
+
+class FastBinaryEncoder(object):
+    """Write leaf values."""
+    def __init__(self, writer):
+        """
+        writer is a Python object on which we can call write.
+        """
+        self.writer = writer
+
+    def write(self, datum):
+        self.writer.write(datum)
+
+    def write_null(self, datum):
+        pass
+
+    def write_boolean(self, datum):
+        write_boolean(self.writer, datum)
+
+    def write_int(self, datum):
+        write_int(self.writer, datum)
+
+    def write_long(self, datum):
+        write_long(self.writer, datum)
+
+    def write_float(self, datum):
+        write_float(self.writer, datum)
+
+    def write_double(self, datum):
+        write_double(self.writer, datum)
+
+    def write_bytes(self, datum):
+        write_bytes(self.writer, datum)
+
+    def write_utf8(self, datum):
+        write_utf8(self.writer, datum)
+
+    def write_crc32(self, bytes):
+        """
+        A 4-byte, big-endian CRC32 checksum
+        """
+        self.writer.write(struct.pack("!I", crc32(bytes) & 0xffffffff))
+
+
+
+class FastBinaryDecoder(object):
+    """Read leaf values."""
+    def __init__(self, reader):
+        """
+        reader is a Python object on which we can call read, seek, and tell.
+        """
+        self.reader = reader
+
+    def read(self, n):
+        return self.reader.read(n)
+
+    def read_null(self):
+        return None
+
+    def read_boolean(self):
+        return read_boolean(self.reader)
+
+    def read_int(self):
+        return read_long(self.reader)
+
+    def read_long(self):
+        return read_long(self.reader)
+
+    def read_float(self):
+        return read_float(self.reader)
+
+    def read_double(self):
+        return read_double(self.reader)
+
+    def read_bytes(self):
+        return read_bytes(self.reader)
+
+    def read_utf8(self):
+        return read_utf8(self.reader)
+
+    def check_crc32(self, bytes):
+        checksum = struct.unpack("!I", self.reader.read(4))[0]
+        if crc32(bytes) & 0xffffffff != checksum:
+            raise RuntimeError("Checksum failure")
+
+    def skip_null(self):
+        pass
+
+    def skip_boolean(self):
+        self.reader.read(1)
+
+    def skip_int(self):
+        read_long(self.reader)
+
+    def skip_long(self):
+        read_long(self.reader)
+
+    def skip_float(self):
+        read_float(self.reader)
+
+    def skip_double(self):
+        read_double(self.reader)
+
+    def skip_bytes(self):
+        read_bytes(self.reader)
+
+    def skip_utf8(self):
+        read_utf8(self.reader)
+
+    def skip(self, n):
+        self.reader.seek(self.reader.tell() + n)
