@@ -337,7 +337,9 @@ class TestIO(unittest.TestCase):
        "fields": [{"name": "F", "type": "int"},
                   {"name": "E", "type": "int"}]}""")
     datum_to_write = {'E': 5, 'F': 'Bad'}
-    self.assertRaises(io.AvroTypeException, write_datum, datum_to_write, writers_schema)
+    with self.assertRaises(io.AvroTypeException) as context:
+        write_datum(datum_to_write, writers_schema)
+    # self.assertRaises(io.AvroTypeException, write_datum, datum_to_write, writers_schema)
 
 if __name__ == '__main__':
   unittest.main()

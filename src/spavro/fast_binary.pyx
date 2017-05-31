@@ -312,6 +312,21 @@ def write_boolean(outbuf, char datum):
     outbuf.write((<char *>&x)[:sizeof(char)])
 
 
+avro_to_py = {
+    u"string": unicode,
+    u"int": int,
+    u"long": int,
+    u"boolean": bool,
+    u"null": type(None),
+    u"float": float,
+    u"double": float,
+    u"array": list,
+    u"record": dict,
+    u"enum": unicode,
+    u"fixed": str,
+    u"map": dict
+}
+
 py_to_avro = {
     unicode: u'string',
     str: u'string',
@@ -419,49 +434,72 @@ check_type_map = {
 def make_union_writer(union_schema):
     cdef list type_list = [get_type(schema) for schema in union_schema]
     # cdef dict writer_lookup
-    cdef list record_list
+    # cdef list record_list
+    cdef dict writer_lookup_dict
+    cdef bool simple_union
+    cdef list lookup_result
+    cdef long idx
 
-    simple_union = not(type_list.count('record') > 1 or len(set(type_list) & set(['string', 'enum', 'fixed'])) > 1
-                       or len(set(type_list) & set(['record', 'map'])) > 1)
+    # if there's more than one kind of record in the union
+    # or if there's a string, enum or fixed combined in the union
+    # or there is both a record and a map in the union then it's no longer
+    # simple. The reason is that reocrds and maps both correspond to python
+    # dict so a simple python type lookup isn't enough to schema match.
+    # enums, strings and fixed are all python data type unicode or string
+    # so those won't work either when mixed
+    simple_union = not(type_list.count('record') > 1 or
+                      len(set(type_list) & set(['string', 'enum', 'fixed'])) > 1 or
+                      len(set(type_list) & set(['record', 'map'])) > 1)
 
     if simple_union:
-        # enums fixed and string all have the same python data type
-        # if there's only one kind in the union, use that kind
-        simple_remap = {'enum': 'string',
-                        'fixed': 'string',
-                        'string': 'string',
-                        'record': 'record',
-                        'map': 'record'}
+        writer_lookup_dict = {avro_to_py[get_type(schema)]: (idx, get_writer(schema)) for idx, schema in enumerate(union_schema)}
+        if int in writer_lookup_dict:
+            writer_lookup_dict[long] = writer_lookup_dict[int]
+        if unicode in writer_lookup_dict:
+            writer_lookup_dict[str] = writer_lookup_dict[unicode]
+        # warning, this will fail if there's both a long and int in a union
+        # or a float and a double in a union (which is valid but nonsensical
+        # in python but valid in avro)
         def simple_writer_lookup(datum):
-            cdef:
-                long idx
-                unicode data_type
-            writer_lookup_dict = {simple_remap.get(get_type(schema), get_type(schema)): (idx, get_writer(schema)) for idx, schema in enumerate(union_schema)}
-            data_type = py_to_avro[type(datum)]
-            return writer_lookup_dict[data_type]
+            return writer_lookup_dict[type(datum)]
+
         writer_lookup = simple_writer_lookup
     else:
-        complex_lookup = [(get_check(schema), get_writer(schema)) for schema in union_schema]
+        writer_lookup_dict = {}
+        for idx, schema in enumerate(union_schema):
+            python_type = avro_to_py[get_type(schema)]
+            if python_type in writer_lookup_dict:
+                writer_lookup_dict[python_type] = writer_lookup_dict[python_type] + [(idx, get_check(schema), get_writer(schema))]
+            else:
+                writer_lookup_dict[python_type] = [(idx, get_check(schema), get_writer(schema))]
+
+        if int in writer_lookup_dict:
+            writer_lookup_dict[long] = writer_lookup_dict[int]
+        if unicode in writer_lookup_dict:
+            writer_lookup_dict[str] = writer_lookup_dict[unicode]
+
         def complex_writer_lookup(datum):
             cdef:
                 long idx
-                unicode data_type
-            writer_lookup_dict = {get_type(schema): (idx, get_writer(schema)) for idx, schema in enumerate(union_schema)}
-            data_type = py_to_avro[type(datum)]
-            if data_type in ('string', 'enum', 'fixed', 'record', 'map'):
-                for idx, (check, writer) in enumerate(complex_lookup):
-                    if check(datum):
-                        return idx, writer
-                else:
-                    raise TypeError("No schema match")
+                list lookup_result
+            lookup_result = writer_lookup_dict[type(datum)]
+            if len(lookup_result) == 1:
+                idx, get_check, writer = lookup_result[0]
             else:
-                return writer_lookup_dict[data_type]
+                for idx, get_check, writer in lookup_result:
+                    if get_check(datum):
+                        break
+                else:
+                    raise TypeError("No matching schema for datum: {}".format(datum))
+            return idx, writer
+
         writer_lookup = complex_writer_lookup
 
     def write_union(outbuf, datum):
         idx, data_writer = writer_lookup(datum)
         write_long(outbuf, idx)
         data_writer(outbuf, datum)
+
     return write_union
 
 def make_enum_writer(schema):

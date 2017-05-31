@@ -814,7 +814,11 @@ class FastDatumWriter(object):
 
     def write(self, datum, encoder):
         # validate datum
-        self.write_datum(encoder.writer, datum)
+        try:
+            self.write_datum(encoder.writer, datum)
+        except TypeError as ex:
+            log.exception("type error")
+            raise AvroTypeException(self.writers_schema, datum)
 
     def write_data(self, schema, datum, encoder):
         try:
