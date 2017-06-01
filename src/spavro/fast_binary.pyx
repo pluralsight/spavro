@@ -1,3 +1,5 @@
+# Copyright (C) 2017 Pluralsight LLC
+
 '''Fast Cython extension for reading / writing and validating AVRO records.
 
 The main edge this code has is that it parses the schema only once and creates

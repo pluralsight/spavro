@@ -31,7 +31,7 @@ setup(
   package_dir={'': 'src'},
   scripts=["./scripts/avro"],
   include_package_data=True,
-  package_data={'spavro': ['LICENSE', 'NOTICE']},
+  package_data={'spavro': ['LICENSE.txt', 'NOTICE.txt']},
   # Project uses simplejson, so ensure that it gets installed or upgraded
   # on the target machine
   install_requires=install_requires,

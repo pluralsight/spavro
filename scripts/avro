@@ -19,7 +19,7 @@
 
 from spavro.io import DatumReader, DatumWriter
 from spavro.datafile import DataFileReader, DataFileWriter
-import avro.schema
+import spavro.schema
 
 try:
     import json
@@ -187,7 +187,7 @@ def write(opts, files):
         raise AvroError("Can't guess input file type (not .json or .csv)")
 
     try:
-        schema = avro.schema.parse(open(opts.schema, "rb").read())
+        schema = spavro.schema.parse(open(opts.schema, "rb").read())
         out = _open(opts.output, "wb")
     except (IOError, OSError), e:
         raise AvroError("Can't open file - %s" % e)

@@ -1,3 +1,5 @@
+# Copyright (C) 2017 Pluralsight LLC
+
 import unittest
 from spavro.schema_resolve import resolve
 from spavro.exceptions import SchemaResolutionException

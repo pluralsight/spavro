@@ -5,13 +5,12 @@ This product includes software developed at Pluralsight
 (http://pluralsight.com) and licensed using the Apache 2.0 license.
 
 Spavro is a derivative work of Apache AVRO, below is the original NOTICE.txt
-from Apache Avro (http://svn.apache.org/viewvc/avro/trunk)
+from Apache Avro (https://github.com/apache/avro/tree/ddfcabcee064d137fb0b9082e8c522ab900433c2)
 
-Apache Avro includes the following in its NOTICE.txt file:
-| Copyright 2010-2015 The Apache Software Foundation
+Copyright 2010-2015 The Apache Software Foundation
 
-| This product includes software developed at
-| The Apache Software Foundation (http://www.apache.org/).
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
 
 NUnit license acknowledgement:
 

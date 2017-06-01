@@ -21,9 +21,9 @@ import time
 from random import sample, choice, randint
 from string import lowercase
 
-import avro.datafile
-import avro.schema
-import avro.io
+import spavro.datafile
+import spavro.schema
+import spavro.io
 
 
 types = ["A", "CNAME"]
@@ -45,9 +45,9 @@ def write(n):
     ]}"""
     out = open("datafile.avr",'w')
 
-    schema = avro.schema.parse(schema_s)
-    writer = avro.io.DatumWriter(schema)
-    dw = avro.datafile.DataFileWriter(out, writer, schema) #,codec='deflate')
+    schema = spavro.schema.parse(schema_s)
+    writer = spavro.io.DatumWriter(schema)
+    dw = spavro.datafile.DataFileWriter(out, writer, schema) #,codec='deflate')
     for _ in xrange(n):
         response = rand_ip()
         query = rand_name()
@@ -58,8 +58,8 @@ def write(n):
 
 def read():
     f = open("datafile.avr")
-    reader = avro.io.DatumReader()
-    af=avro.datafile.DataFileReader(f,reader)
+    reader = spavro.io.DatumReader()
+    af = spavro.datafile.DataFileReader(f,reader)
 
     x=0
     for _ in af:

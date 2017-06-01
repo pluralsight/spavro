@@ -1,3 +1,5 @@
+# Modifications copyright (C) 2017 Pluralsight LLC
+#
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -21,7 +23,7 @@ try:
 except ImportError:
     import simplejson as json
 from tempfile import NamedTemporaryFile
-import avro.schema
+import spavro.schema
 from spavro.io import DatumWriter
 from spavro.datafile import DataFileWriter
 from os.path import dirname, join, isfile
@@ -84,7 +86,7 @@ _JSON_PRETTY = '''{
 }'''
 
 def gen_avro(filename):
-    schema = avro.schema.parse(SCHEMA)
+    schema = spavro.schema.parse(SCHEMA)
     fo = open(filename, "wb")
     writer = DataFileWriter(fo, DatumWriter(), schema)
     for record in looney_records():

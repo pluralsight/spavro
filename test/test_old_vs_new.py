@@ -1,3 +1,5 @@
+# Copyright (C) 2017 Pluralsight LLC
+
 import unittest
 try:
   from cStringIO import StringIO
