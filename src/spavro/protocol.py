@@ -81,10 +81,10 @@ class Protocol(object):
         if not name:
             fail_msg = 'Protocols must have a non-empty name.'
             raise ProtocolParseException(fail_msg)
-        elif not isinstance(name, six.text_type):
+        elif not isinstance(name, six.string_types):
             fail_msg = 'The name property must be a string.'
             raise ProtocolParseException(fail_msg)
-        elif namespace is not None and not isinstance(namespace, six.text_type):
+        elif namespace is not None and not isinstance(namespace, six.string_types):
             fail_msg = 'The namespace property must be a string.'
             raise ProtocolParseException(fail_msg)
         elif types is not None and not isinstance(types, list):
@@ -157,7 +157,7 @@ class Message(object):
         return schema.RecordSchema(None, None, request, names, 'request')
     
     def _parse_response(self, response, names):
-        if isinstance(response, six.text_type) and names.has_name(response, None):
+        if isinstance(response, six.string_types) and names.has_name(response, None):
             return names.get_name(response, None)
         else:
             return schema.make_avsc_object(response, names)
