@@ -7,9 +7,9 @@
 # to you under the Apache License, Version 2.0 (the
 # "License"); you may not use this file except in compliance
 # with the License.  You may obtain a copy of the License at
-# 
+#
 # http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -103,8 +103,10 @@ VALID_FIELD_SORT_ORDERS = (
 # Exceptions
 #
 
+
 class AvroException(Exception):
     pass
+
 
 class SchemaParseException(AvroException):
     pass
@@ -112,6 +114,7 @@ class SchemaParseException(AvroException):
 #
 # Base Classes
 #
+
 
 class Schema(object):
     """Base class for all Schema classes."""
@@ -158,13 +161,14 @@ class Schema(object):
         """
         raise Exception("Must be implemented by subclasses.")
 
+
 class Name(object):
     """Class to describe Avro name."""
-    
+
     def __init__(self, name_attr, space_attr, default_space):
         """
         Formulate full name according to the specification.
-        
+
         @arg name_attr: name value read in schema or None.
         @arg space_attr: namespace value read in schema or None.
         @ard default_space: the current default space or None.
@@ -183,19 +187,19 @@ class Name(object):
         elif name_attr == "":
             fail_msg = 'Space must be non-empty string or None.'
             raise SchemaParseException(fail_msg)
-    
+
         if not (isinstance(default_space, six.string_types) or (default_space is None)):
             fail_msg = 'Default space must be non-empty string or None.'
             raise SchemaParseException(fail_msg)
         elif name_attr == "":
             fail_msg = 'Default must be non-empty string or None.'
             raise SchemaParseException(fail_msg)
-        
-        self._full = None; 
-        
+
+        self._full = None
+
         if name_attr is None or name_attr == "":
-                return;
-        
+            return
+
         if (name_attr.find('.') < 0):
             if (space_attr is not None) and (space_attr != ""):
                 self._full = "%s.%s" % (space_attr, name_attr)
@@ -261,14 +265,14 @@ class Names(object):
     def add_name(self, name_attr, space_attr, new_schema):
         """
         Add a new schema object to the name set.
-        
+
             @arg name_attr: name value read in schema
             @arg space_attr: namespace value read in schema.
-            
+
             @return: the Name that was just added.
         """
         to_add = Name(name_attr, space_attr, self.default_namespace)
-        
+
         if to_add.fullname in VALID_TYPES:
             fail_msg = '%s is a reserved type name.' % to_add.fullname
             raise SchemaParseException(fail_msg)
@@ -278,6 +282,7 @@ class Names(object):
 
         self.names[to_add.fullname] = new_schema
         return to_add
+
 
 class NamedSchema(Schema):
     """Named Schemas specified in NAMED_TYPES."""
@@ -301,12 +306,12 @@ class NamedSchema(Schema):
 
         # Store name and namespace as they were read in origin schema
         self.set_prop('name', name)
-        if namespace is not None: 
+        if namespace is not None:
             self.set_prop('namespace', new_name.get_space())
 
         # Store full name as calculated from name, namespace
         self._fullname = new_name.fullname
-        
+
     def name_ref(self, names):
         if self.namespace == names.default_namespace:
             return self.name
