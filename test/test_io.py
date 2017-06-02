@@ -16,10 +16,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import unittest
-try:
-  from cStringIO import StringIO
-except ImportError:
-  from StringIO import StringIO
+import six
+from six import BytesIO as StringIO
+# try:
+#   from cStringIO import StringIO
+# except ImportError:
+#   from StringIO import StringIO
 from binascii import hexlify
 
 import set_avro_test_path
@@ -76,7 +78,7 @@ DEFAULT_VALUE_EXAMPLES = (
   ('"string"', '"foo"', u'foo'),
   ('"bytes"', '"\u00FF\u00FF"', u'\xff\xff'),
   ('"int"', '5', 5),
-  ('"long"', '5', 5L),
+  ('"long"', '5', 5),
   ('"float"', '1.1', 1.1),
   ('"double"', '1.1', 1.1),
   ('{"type": "fixed", "name": "F", "size": 2}', '"\u00FF\u00FF"', u'\xff\xff'),

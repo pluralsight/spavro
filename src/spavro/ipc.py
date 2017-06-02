@@ -18,11 +18,9 @@
 """
 Support for inter-process calls.
 """
-import httplib
-try:
-  from cStringIO import StringIO
-except ImportError:
-  from StringIO import StringIO
+import six
+from six.moves import http_client as httplib
+from six import BytesIO as StringIO
 from spavro import io
 from spavro import protocol
 from spavro import schema
@@ -33,11 +31,11 @@ from spavro import schema
 
 # Handshake schema is pulled in during build
 with open('./ipc/HandshakeRequest.avsc', 'rb') as handshake_request:
-    HANDSHAKE_REQUEST_SCHEMA = schema.parse(handshake_request.read())
+    HANDSHAKE_REQUEST_SCHEMA = schema.parse(handshake_request.read().decode('utf-8'))
 # """
 # """)
 with open('./ipc/HandshakeResponse.avsc', 'rb') as handshake_response:
-    HANDSHAKE_RESPONSE_SCHEMA = schema.parse(handshake_response.read())
+    HANDSHAKE_RESPONSE_SCHEMA = schema.parse(handshake_response.read().decode('utf-8'))
 
 # HANDSHAKE_RESPONSE_SCHEMA = schema.parse("""
 # @HANDSHAKE_RESPONSE_SCHEMA@
@@ -301,9 +299,9 @@ class Responder(object):
       # perform server logic
       try:
         response = self.invoke(local_message, request)
-      except AvroRemoteException, e:
+      except AvroRemoteException as e:
         error = e
-      except Exception, e:
+      except Exception as e:
         error = AvroRemoteException(str(e))
 
       # write response using local protocol
@@ -315,7 +313,7 @@ class Responder(object):
       else:
         writers_schema = local_message.errors
         self.write_error(writers_schema, error, buffer_encoder)
-    except schema.AvroException, e:
+    except schema.AvroException as e:
       error = AvroRemoteException(str(e))
       buffer_encoder = io.BinaryEncoder(StringIO())
       META_WRITER.write(response_metadata, buffer_encoder)

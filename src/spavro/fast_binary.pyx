@@ -265,7 +265,7 @@ cdef void write_int(outbuf, long long signed_datum):
 write_long = write_int
 
 
-cdef void write_bytes(outbuf, char* datum):
+cdef void write_bytes(outbuf, datum):
     """
     Bytes are encoded as a long followed by that many bytes of data. 
     """
@@ -303,7 +303,7 @@ cdef void write_null(outbuf, datum):
     pass
 
 
-cdef void write_fixed(outbuf, bytes datum):
+cdef void write_fixed(outbuf, datum):
     outbuf.write(datum)
 
 
@@ -438,7 +438,7 @@ def make_union_writer(union_schema):
     # cdef dict writer_lookup
     # cdef list record_list
     cdef dict writer_lookup_dict
-    cdef bool simple_union
+    cdef char simple_union
     cdef list lookup_result
     cdef long idx
 
@@ -507,7 +507,8 @@ def make_union_writer(union_schema):
 def make_enum_writer(schema):
     cdef list symbols = schema['symbols']
 
-    def write_enum(outbuf, char* datum):
+    # the datum can be str or unicode?
+    def write_enum(outbuf, basestring datum):
         cdef int enum_index = symbols.index(datum)
         write_int(outbuf, enum_index)
     return write_enum

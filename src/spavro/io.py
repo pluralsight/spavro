@@ -48,7 +48,14 @@ try:
 except ImportError:
     import simplejson as json
 
-from schema_resolve import resolve
+import six
+# python3
+try:
+    long
+except NameError:
+    long = int
+
+from spavro.schema_resolve import resolve
 #
 # Constants
 #
@@ -83,7 +90,7 @@ STRUCT_CRC32 = struct_class('>I')     # big-endian unsigned int
 # Exceptions
 #
 
-from exceptions import AvroTypeException, SchemaResolutionException
+from spavro.exceptions import AvroTypeException, SchemaResolutionException
 
 #
 # Validate
@@ -98,20 +105,20 @@ def validate(expected_schema, datum):
     elif schema_type == 'boolean':
         return isinstance(datum, bool)
     elif schema_type == 'string':
-        return isinstance(datum, basestring)
+        return isinstance(datum, six.string_types)
     elif schema_type == 'bytes':
-        return isinstance(datum, str)
+        return isinstance(datum, bytes)
     elif schema_type == 'int':
-        return ((isinstance(datum, int) or isinstance(datum, long))
+        return (isinstance(datum, six.integer_types)
                         and INT_MIN_VALUE <= datum <= INT_MAX_VALUE)
     elif schema_type == 'long':
-        return ((isinstance(datum, int) or isinstance(datum, long))
+        return (isinstance(datum, six.integer_types)
                         and LONG_MIN_VALUE <= datum <= LONG_MAX_VALUE)
     elif schema_type in ['float', 'double']:
-        return (isinstance(datum, int) or isinstance(datum, long)
+        return (isinstance(datum, six.integer_types)
                         or isinstance(datum, float))
     elif schema_type == 'fixed':
-        return isinstance(datum, str) and len(datum) == expected_schema.size
+        return isinstance(datum, bytes) and len(datum) == expected_schema.size
     elif schema_type == 'enum':
         return datum in expected_schema.symbols
     elif schema_type == 'array':
@@ -119,7 +126,7 @@ def validate(expected_schema, datum):
             False not in [validate(expected_schema.items, d) for d in datum])
     elif schema_type == 'map':
         return (isinstance(datum, dict) and
-            False not in [isinstance(k, basestring) for k in datum.keys()] and
+            False not in [isinstance(k, six.string_types) for k in datum.keys()] and
             False not in
                 [validate(expected_schema.values, v) for v in datum.values()])
     elif schema_type in ['union', 'error_union']:
@@ -138,14 +145,14 @@ log = logging.getLogger(__name__)
 use_fast = False
 try:
         # raise ImportError("Force off")
-        from fast_binary import get_reader, get_writer
-        from fast_binary import FastBinaryEncoder, FastBinaryDecoder
-        log.info("Using fast C extension")
+        from spavro.fast_binary import get_reader, get_writer
+        from spavro.fast_binary import FastBinaryEncoder, FastBinaryDecoder
+        # log.info("Using fast C extension")
         use_fast = True
 except ImportError:
         # from binary import BinaryEncoder, BinaryDecoder
         log.warn("Failed to load spavro C extension")
-from binary import BinaryEncoder as SlowBinaryEncoder, BinaryDecoder as SlowBinaryDecoder
+from spavro.binary import BinaryEncoder as SlowBinaryEncoder, BinaryDecoder as SlowBinaryDecoder
 
 #
 # SlowDatumReader/Writer
@@ -481,7 +488,7 @@ class SlowDatumReader(object):
         if len(readers_fields_dict) > len(read_record):
             writers_fields_dict = writers_schema.fields_dict
             for field_name, field in readers_fields_dict.items():
-                if not writers_fields_dict.has_key(field_name):
+                if field_name not in writers_fields_dict:
                     if field.has_default:
                         field_val = self._read_default_value(field.type, field.default)
                         read_record[field.name] = field_val
@@ -819,6 +826,7 @@ class FastDatumWriter(object):
         try:
             self.write_datum(encoder.writer, datum)
         except TypeError as ex:
+            log.error(self.write_datum)
             log.exception("type error")
             raise AvroTypeException(self.writers_schema, datum)
 

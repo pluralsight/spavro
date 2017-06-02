@@ -31,32 +31,40 @@ from itertools import ifilter, imap
 from functools import partial
 from os.path import splitext
 
+
 class AvroError(Exception):
     pass
+
 
 def print_json(row):
     print(json.dumps(row))
 
+
 def print_json_pretty(row):
     print(json.dumps(row, indent=4))
 
+
 _write_row = csv.writer(stdout).writerow
 _encoding = stdout.encoding or "UTF-8"
+
+
 def _encode(v, encoding=_encoding):
     if not isinstance(v, basestring):
         return v
     return v.encode(_encoding)
+
 
 def print_csv(row):
     # We sort the keys to the fields will be in the same place
     # FIXME: Do we want to do it in schema order?
     _write_row([_encode(row[key]) for key in sorted(row)])
 
+
 def select_printer(format):
     return {
-        "json" : print_json,
-        "json-pretty" : print_json_pretty,
-        "csv" : print_csv
+        "json": print_json,
+        "json-pretty": print_json_pretty,
+        "csv": print_csv
     }[format]
 
 def record_match(expr, record):

@@ -1,8 +1,8 @@
 # Copyright (C) 2017 Pluralsight LLC
 
 # resolve schemas
-from fast_binary import get_type
-from exceptions import SchemaResolutionException
+from spavro.fast_binary import get_type
+from spavro.exceptions import SchemaResolutionException
 
 
 def get_field_by_name(fields, name):

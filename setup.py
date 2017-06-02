@@ -13,13 +13,12 @@ try:
 except ImportError:
     USE_CYTHON = False
 
-install_requires = []
+install_requires = ['six>=1.10.0']
 if version_info[:2] <= (2, 5):
     install_requires.append('simplejson >= 2.0.9')
 
 ext = '.pyx' if USE_CYTHON else '.c'
-extensions = [Extension("spavro.fast_binary", ["src/spavro/fast_binary" + ext])]
-
+extensions = [Extension("spavro.fast_binary", sources=["src/spavro/fast_binary" + ext])]
 
 if USE_CYTHON:
     extensions = cythonize(extensions)
@@ -29,7 +28,7 @@ setup(
   version='1.0',
   packages=['spavro'],
   package_dir={'': 'src'},
-  scripts=["./scripts/avro"],
+  # scripts=["./scripts/avro"],
   include_package_data=True,
   package_data={'spavro': ['LICENSE.txt', 'NOTICE.txt']},
   # Project uses simplejson, so ensure that it gets installed or upgraded

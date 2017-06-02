@@ -20,6 +20,7 @@ import sys
 import struct
 from binascii import crc32
 from spavro import schema
+import six
 
 # TODO(hammer): shouldn't ! be < for little-endian (according to spec?)
 if sys.version_info >= (2, 5, 0):
@@ -99,10 +100,10 @@ class BinaryDecoder(object):
         The float is converted into a 32-bit integer using a method equivalent to
         Java's floatToIntBits and then encoded in little-endian format.
         """
-        bits = (((ord(self.read(1)) & 0xffL)) |
-            ((ord(self.read(1)) & 0xffL) <<    8) |
-            ((ord(self.read(1)) & 0xffL) << 16) |
-            ((ord(self.read(1)) & 0xffL) << 24))
+        bits = (((ord(self.read(1)) & 0xff)) |
+            ((ord(self.read(1)) & 0xff) <<    8) |
+            ((ord(self.read(1)) & 0xff) << 16) |
+            ((ord(self.read(1)) & 0xff) << 24))
         return STRUCT_FLOAT.unpack(STRUCT_INT.pack(bits))[0]
 
     def read_double(self):
@@ -111,14 +112,14 @@ class BinaryDecoder(object):
         The double is converted into a 64-bit integer using a method equivalent to
         Java's doubleToLongBits and then encoded in little-endian format.
         """
-        bits = (((ord(self.read(1)) & 0xffL)) |
-            ((ord(self.read(1)) & 0xffL) <<    8) |
-            ((ord(self.read(1)) & 0xffL) << 16) |
-            ((ord(self.read(1)) & 0xffL) << 24) |
-            ((ord(self.read(1)) & 0xffL) << 32) |
-            ((ord(self.read(1)) & 0xffL) << 40) |
-            ((ord(self.read(1)) & 0xffL) << 48) |
-            ((ord(self.read(1)) & 0xffL) << 56))
+        bits = (((ord(self.read(1)) & 0xff)) |
+            ((ord(self.read(1)) & 0xff) <<    8) |
+            ((ord(self.read(1)) & 0xff) << 16) |
+            ((ord(self.read(1)) & 0xff) << 24) |
+            ((ord(self.read(1)) & 0xff) << 32) |
+            ((ord(self.read(1)) & 0xff) << 40) |
+            ((ord(self.read(1)) & 0xff) << 48) |
+            ((ord(self.read(1)) & 0xff) << 56))
         return STRUCT_DOUBLE.unpack(STRUCT_LONG.pack(bits))[0]
 
     def read_bytes(self):
@@ -196,9 +197,9 @@ class BinaryEncoder(object):
         whose value is either 0 (false) or 1 (true).
         """
         if datum:
-            self.write(chr(1))
+            self.write(six.int2byte(1))
         else:
-            self.write(chr(0))
+            self.write(six.int2byte(0))
 
     def write_int(self, datum):
         """
@@ -212,9 +213,9 @@ class BinaryEncoder(object):
         """
         datum = (datum << 1) ^ (datum >> 63)
         while (datum & ~0x7F) != 0:
-            self.write(chr((datum & 0x7f) | 0x80))
+            self.write(six.int2byte((datum & 0x7f) | 0x80))
             datum >>= 7
-        self.write(chr(datum))
+        self.write(six.int2byte(datum))
 
     def write_float(self, datum):
         """
@@ -223,10 +224,10 @@ class BinaryEncoder(object):
         Java's floatToIntBits and then encoded in little-endian format.
         """
         bits = STRUCT_INT.unpack(STRUCT_FLOAT.pack(datum))[0]
-        self.write(chr((bits) & 0xFF))
-        self.write(chr((bits >> 8) & 0xFF))
-        self.write(chr((bits >> 16) & 0xFF))
-        self.write(chr((bits >> 24) & 0xFF))
+        self.write(six.int2byte((bits) & 0xFF))
+        self.write(six.int2byte((bits >> 8) & 0xFF))
+        self.write(six.int2byte((bits >> 16) & 0xFF))
+        self.write(six.int2byte((bits >> 24) & 0xFF))
 
     def write_double(self, datum):
         """
@@ -235,14 +236,14 @@ class BinaryEncoder(object):
         Java's doubleToLongBits and then encoded in little-endian format.
         """
         bits = STRUCT_LONG.unpack(STRUCT_DOUBLE.pack(datum))[0]
-        self.write(chr((bits) & 0xFF))
-        self.write(chr((bits >> 8) & 0xFF))
-        self.write(chr((bits >> 16) & 0xFF))
-        self.write(chr((bits >> 24) & 0xFF))
-        self.write(chr((bits >> 32) & 0xFF))
-        self.write(chr((bits >> 40) & 0xFF))
-        self.write(chr((bits >> 48) & 0xFF))
-        self.write(chr((bits >> 56) & 0xFF))
+        self.write(six.int2byte((bits) & 0xFF))
+        self.write(six.int2byte((bits >> 8) & 0xFF))
+        self.write(six.int2byte((bits >> 16) & 0xFF))
+        self.write(six.int2byte((bits >> 24) & 0xFF))
+        self.write(six.int2byte((bits >> 32) & 0xFF))
+        self.write(six.int2byte((bits >> 40) & 0xFF))
+        self.write(six.int2byte((bits >> 48) & 0xFF))
+        self.write(six.int2byte((bits >> 56) & 0xFF))
 
     def write_bytes(self, datum):
         """

@@ -40,6 +40,9 @@ try:
 except ImportError:
   import simplejson as json
 
+# Python3
+import six
+
 #
 # Constants
 #
@@ -114,7 +117,7 @@ class Schema(object):
   """Base class for all Schema classes."""
   def __init__(self, type, other_props=None):
     # Ensure valid ctor args
-    if not isinstance(type, basestring):
+    if not isinstance(type, six.string_types):
       fail_msg = 'Schema type must be a string.'
       raise SchemaParseException(fail_msg)
     elif type not in VALID_TYPES:
@@ -167,21 +170,21 @@ class Name(object):
     @ard default_space: the current default space or None.
     """
     # Ensure valid ctor args
-    if not (isinstance(name_attr, basestring) or (name_attr is None)):
+    if not (isinstance(name_attr, six.string_types) or (name_attr is None)):
       fail_msg = 'Name must be non-empty string or None.'
       raise SchemaParseException(fail_msg)
     elif name_attr == "":
       fail_msg = 'Name must be non-empty string or None.'
       raise SchemaParseException(fail_msg)
 
-    if not (isinstance(space_attr, basestring) or (space_attr is None)):
+    if not (isinstance(space_attr, six.string_types) or (space_attr is None)):
       fail_msg = 'Space must be non-empty string or None.'
       raise SchemaParseException(fail_msg)
     elif name_attr == "":
       fail_msg = 'Space must be non-empty string or None.'
       raise SchemaParseException(fail_msg)
   
-    if not (isinstance(default_space, basestring) or (default_space is None)):
+    if not (isinstance(default_space, six.string_types) or (default_space is None)):
       fail_msg = 'Default space must be non-empty string or None.'
       raise SchemaParseException(fail_msg)
     elif name_attr == "":
@@ -229,11 +232,11 @@ class Names(object):
       
   def has_name(self, name_attr, space_attr):
       test = Name(name_attr, space_attr, self.default_namespace).fullname
-      return self.names.has_key(test)
+      return test in self.names
   
-  def get_name(self, name_attr, space_attr):    
+  def get_name(self, name_attr, space_attr):
       test = Name(name_attr, space_attr, self.default_namespace).fullname
-      if not self.names.has_key(test):
+      if test not in self.names:
           return None
       return self.names[test]
   
@@ -268,7 +271,7 @@ class Names(object):
     if to_add.fullname in VALID_TYPES:
       fail_msg = '%s is a reserved type name.' % to_add.fullname
       raise SchemaParseException(fail_msg)
-    elif self.names.has_key(to_add.fullname):
+    elif to_add.fullname in self.names:
       fail_msg = 'The name "%s" is already in use.' % to_add.fullname
       raise SchemaParseException(fail_msg)
 
@@ -282,10 +285,10 @@ class NamedSchema(Schema):
     if not name:
       fail_msg = 'Named Schemas must have a non-empty name.'
       raise SchemaParseException(fail_msg)
-    elif not isinstance(name, basestring):
+    elif not isinstance(name, six.string_types):
       fail_msg = 'The name property must be a string.'
       raise SchemaParseException(fail_msg)
-    elif namespace is not None and not isinstance(namespace, basestring):
+    elif namespace is not None and not isinstance(namespace, six.string_types):
       fail_msg = 'The namespace property must be a string.'
       raise SchemaParseException(fail_msg)
 
@@ -321,7 +324,7 @@ class Field(object):
     if not name:
       fail_msg = 'Fields must have a non-empty name.'
       raise SchemaParseException(fail_msg)
-    elif not isinstance(name, basestring):
+    elif not isinstance(name, six.string_types):
       fail_msg = 'The name property must be a string.'
       raise SchemaParseException(fail_msg)
     elif order is not None and order not in VALID_FIELD_SORT_ORDERS:
@@ -333,13 +336,13 @@ class Field(object):
     self._has_default = has_default
     self._props.update(other_props or {})
 
-    if (isinstance(type, basestring) and names is not None
+    if (isinstance(type, six.string_types) and names is not None
         and names.has_name(type, None)):
       type_schema = names.get_name(type, None)
     else:
       try:
         type_schema = make_avsc_object(type, names)
-      except Exception, e:
+      except Exception as e:
         fail_msg = 'Type property "%s" not a valid Avro schema: %s' % (type, e)
         raise SchemaParseException(fail_msg)
     self.set_prop('type', type_schema)
@@ -444,7 +447,7 @@ class EnumSchema(NamedSchema):
     if not isinstance(symbols, list):
       fail_msg = 'Enum Schema requires a JSON array for the symbols property.'
       raise AvroException(fail_msg)
-    elif False in [isinstance(s, basestring) for s in symbols]:
+    elif False in [isinstance(s, six.string_types) for s in symbols]:
       fail_msg = 'Enum Schema requires all symbols to be JSON strings.'
       raise AvroException(fail_msg)
     elif len(set(symbols)) < len(symbols):
@@ -484,12 +487,12 @@ class ArraySchema(Schema):
     Schema.__init__(self, 'array', other_props)
     # Add class members
 
-    if isinstance(items, basestring) and names.has_name(items, None):
+    if isinstance(items, six.string_types) and names.has_name(items, None):
       items_schema = names.get_name(items, None)
     else:
       try:
         items_schema = make_avsc_object(items, names)
-      except SchemaParseException, e:
+      except SchemaParseException as e:
         fail_msg = 'Items schema (%s) not a valid Avro schema: %s (known names: %s)' % (items, e, names.names.keys())
         raise SchemaParseException(fail_msg)
 
@@ -516,7 +519,7 @@ class MapSchema(Schema):
     Schema.__init__(self, 'map',other_props)
 
     # Add class members
-    if isinstance(values, basestring) and names.has_name(values, None):
+    if isinstance(values, six.string_types) and names.has_name(values, None):
       values_schema = names.get_name(values, None)
     else:
       try:
@@ -557,12 +560,12 @@ class UnionSchema(Schema):
     # Add class members
     schema_objects = []
     for schema in schemas:
-      if isinstance(schema, basestring) and names.has_name(schema, None):
+      if isinstance(schema, six.string_types) and names.has_name(schema, None):
         new_schema = names.get_name(schema, None)
       else:
         try:
           new_schema = make_avsc_object(schema, names)
-        except Exception, e:
+        except Exception as e:
           raise SchemaParseException('Union item must be a valid Avro schema: %s' % str(e))
       # check the new schema
       if (new_schema.type in VALID_TYPES and new_schema.type not in NAMED_TYPES
@@ -618,7 +621,7 @@ class RecordSchema(NamedSchema):
         # null values can have a default value of None
         has_default = False
         default = None
-        if field.has_key('default'):
+        if 'default' in field:
           has_default = True
           default = field.get('default')
 
@@ -775,10 +778,10 @@ def parse(json_string):
   # parse the JSON
   try:
     json_data = json.loads(json_string)
-  except Exception, e:
+  except Exception as e:
     import sys
     raise SchemaParseException('Error parsing JSON: %s, error = %s'
-                               % (json_string, e)), None, sys.exc_info()[2]
+                               % (json_string, e)) # , None, sys.exc_info()[2]
 
   # Initialize the names object
   names = Names()

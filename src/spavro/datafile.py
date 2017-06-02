@@ -19,10 +19,8 @@
 Read/Write Avro File Object Containers.
 """
 import zlib
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+import six
+from six import BytesIO as StringIO
 from spavro import schema
 from spavro import io
 try:
@@ -35,7 +33,7 @@ except ImportError:
 #
 
 VERSION = 1
-MAGIC = 'Obj' + chr(VERSION)
+MAGIC = b'Obj' + six.int2byte(VERSION)  # chr(VERSION)
 MAGIC_SIZE = len(MAGIC)
 SYNC_SIZE = 16
 SYNC_INTERVAL = 4000 * SYNC_SIZE # TODO(hammer): make configurable
@@ -141,9 +139,9 @@ class DataFileWriter(object):
 
     # utility functions to read/write metadata entries
     def get_meta(self, key):
-        return self._meta.get(key)
+        return self._meta.get(key).decode('utf-8')
     def set_meta(self, key, val):
-        self._meta[key] = val
+        self._meta[key] = val.encode('utf-8')
 
     def _write_header(self):
         header = {'magic': MAGIC,
@@ -224,7 +222,7 @@ class DataFileWriter(object):
         self.writer.close()
 
 
-class DataFileReader(object):
+class DataFileReader(six.Iterator):
     """Read files written by DataFileWriter."""
     # TODO(hammer): allow user to specify expected schema?
     # TODO(hammer): allow user to specify the encoder
@@ -238,7 +236,7 @@ class DataFileReader(object):
         self._read_header()
 
         # ensure codec is valid
-        self.codec = self.get_meta('avro.codec')
+        self.codec = self.get_meta(CODEC_KEY)
         if self.codec is None:
             self.codec = "null"
         if self.codec not in VALID_CODECS:
@@ -278,9 +276,9 @@ class DataFileReader(object):
 
     # utility functions to read/write metadata entries
     def get_meta(self, key):
-        return self._meta.get(key)
+        return self._meta.get(key).decode('utf-8')
     def set_meta(self, key, val):
-        self._meta[key] = val
+        self._meta[key] = val.encode('utf-8')
 
     def determine_file_length(self):
         """
@@ -297,7 +295,7 @@ class DataFileReader(object):
 
     def _read_header(self):
         # seek to the beginning of the file to get magic block
-        self.reader.seek(0, 0) 
+        self.reader.seek(0, 0)
 
         # read header into a dict
         header = self.datum_reader.read_data(
@@ -353,7 +351,7 @@ class DataFileReader(object):
 
     # TODO(hammer): handle block of length zero
     # TODO(hammer): clean this up with recursion
-    def next(self):
+    def __next__(self):
         """Return the next datum in the file."""
         if self.block_count == 0:
             if self.is_EOF():
