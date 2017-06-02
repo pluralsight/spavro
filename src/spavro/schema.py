@@ -128,13 +128,14 @@ class Schema(object):
             raise SchemaParseException(fail_msg)
 
         # add members
-        if not hasattr(self, '_props'): self._props = {}
+        if not hasattr(self, '_props'):
+            self._props = {}
         self.set_prop('type', type)
         self.type = type
         self._props.update(other_props or {})
 
     # Read-only properties dict. Printing schemas
-    # creates JSON properties directly from this dict. 
+    # creates JSON properties directly from this dict.
     props = property(lambda self: self._props)
 
     # Read-only property dict. Non-reserved properties
@@ -205,7 +206,7 @@ class Name(object):
                 self._full = "%s.%s" % (space_attr, name_attr)
             else:
                 if (default_space is not None) and (default_space != ""):
-                     self._full = "%s.%s" % (default_space, name_attr)
+                    self._full = "%s.%s" % (default_space, name_attr)
                 else:
                     self._full = name_attr
         else:
@@ -806,7 +807,7 @@ def parse(json_string):
     except Exception as e:
         import sys
         raise SchemaParseException('Error parsing JSON: %s, error = %s'
-                                                             % (json_string, e)) # , None, sys.exc_info()[2]
+                                                        % (json_string, e)) # , None, sys.exc_info()[2]
 
     # Initialize the names object
     names = Names()
