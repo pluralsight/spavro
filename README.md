@@ -1,19 +1,19 @@
 # (Sp)eedier Avro - Spavro
 
-Spavro is a fork of the official Apache AVRO python 2 implementation with the goal of greatly improving data read and write serialization performance.
+Spavro is a fork of the official Apache AVRO python 2 implementation with the goal of greatly improving data read deserialization and write serialization performance.
 
-Spavro is also python 2/3 compatible (instead of a spearate project / implementation). Tested using py2.7 and py3.5.
+Spavro is also python 2/3 compatible (instead of a spearate project / implementation). Currently only tested using py2.7 and py3.5.
 
 
 ## Implementation Details
 
-There are two primary differences between the official implementation and Spavro. First, Spavro uses a C extension, created with Cython, to accelerate some of the low level binary serialization logic. Additionally Spavro uses a different model for handling schemas. Spavro attemps to parse the write and read schemas _once_ and only _once_ and creates recursive reader/writer functions from the schema definition. These reader/writer functions encode the type structure of the schema so no additional lookups are necessary while processing data.
+There are three primary differences between the official implementation and Spavro. First, Spavro uses a C extension, created with Cython, to accelerate some of the low level binary serialization logic. Additionally Spavro uses a different model for handling schemas. Spavro attemps to parse the write and read schemas _once_ and only _once_ and creates recursive reader/writer functions from the schema definition. These reader/writer functions encode the type structure of the schema so no additional lookups are necessary while processing data. The last difference is that Spavro has been updated to be both Python 2 and Python 3 compatible using the `six` library. The official apache AVRO implementation has two separate codebases for Python 2 and Python 3 and spavro only has one.
 
-This has the net effect of greatly improving the throughput of reading and writing individual datums, since the schema isn't interrogated for every datum.
+This has the net effect of greatly improving the throughput of reading and writing individual datums, since the schema isn't interrogated for every datum. This can be especially beneficial for "compatible" schema reading where both a read and write schema are needed to be able to read a complete data set.
 
 ## Performance
 
-Some (very non-scientific) benchmarks on an arbitray data set (using my development laptop) show a 5-17x improvement in serialization / deserialization throughput. A simple test was run using ~135k relatively large real world records.
+Some (very non-scientific) benchmarks on an arbitray data set (using my development laptop) show a 2-17x improvement in serialization / deserialization throughput. A simple test was run using ~135k relatively large (5k) real world records. YMMV but in all cases spavro was faster than both the default apache implementation and the "fastavro" library.
 
 ### deserialize 135k avro records
 default implementation
@@ -38,9 +38,9 @@ spavro library
 
 ## API
 
-All attempts were made to externally mimic the default library's API. This was done so that Spavro could be used as a drop-in replacement for the official implementation.
+Spavro keeps the default Apache library's API. This allows spavro to be a drop-in replacement for code using the existing Apache implementation. 
 
 ## Tests
 
-Since the API matches the existing library, the majority of the existing test suite is used to verify the correct operation of Spavro. Spavro adds some additional correctness tests to compare new vs old behaviors as well as some additional logic tests above and beyond the original library. Some of the java-based "map reduce" tests (specifically the tether tests) were removed because Spavro does not include the java code to implement that logic.
+Since the API matches the existing library, the majority of the existing Apache test suite is used to verify the correct operation of Spavro. Spavro adds some additional correctness tests to compare new vs old behaviors as well as some additional logic tests above and beyond the original library. Some of the java-based "map reduce" tests (specifically the tether tests) were removed because Spavro does not include the java code to implement that logic.
 
