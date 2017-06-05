@@ -144,7 +144,6 @@ logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
 use_fast = False
 try:
-        # raise ImportError("Force off")
         from spavro.fast_binary import get_reader, get_writer
         from spavro.fast_binary import FastBinaryEncoder, FastBinaryDecoder
         # log.info("Using fast C extension")
@@ -687,7 +686,7 @@ class SlowDatumWriter(object):
 class FastDatumReader(object):
     """Deserialize Avro-encoded data into a Python data structure, Fast Version.
 
-    Uses the new fast avro C extension but maintains the old API.
+    Uses the new spavro C extension but maintains the old API.
     """
     @staticmethod
     def check_props(schema_one, schema_two, prop_list):
