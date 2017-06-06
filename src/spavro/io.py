@@ -144,18 +144,17 @@ logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
 use_fast = False
 try:
-        from spavro.fast_binary import get_reader, get_writer
-        from spavro.fast_binary import FastBinaryEncoder, FastBinaryDecoder
-        # log.info("Using fast C extension")
-        use_fast = True
+    from spavro.fast_binary import get_reader, get_writer
+    from spavro.fast_binary import FastBinaryEncoder, FastBinaryDecoder
+    use_fast = True
 except ImportError:
-        # from binary import BinaryEncoder, BinaryDecoder
-        log.warn("Failed to load spavro C extension")
+    log.warn("Failed to load spavro C extension, using default slow Encoder/Decoder")
 from spavro.binary import BinaryEncoder as SlowBinaryEncoder, BinaryDecoder as SlowBinaryDecoder
 
 #
 # SlowDatumReader/Writer
 #
+
 
 class SlowDatumReader(object):
     """Deserialize Avro-encoded data into a Python data structure."""
