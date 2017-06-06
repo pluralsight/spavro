@@ -39,13 +39,24 @@ setup(
   # metadata for upload to PyPI
   author='Michael Kowalchik',
   author_email='mikepk@pluralsight.com',
-  description='Spavro is a (sp)eedier avro serialization library forked from the official Apache Python implementation.',
+  description='Spavro is a (sp)eedier avro library -- Spavro is a fork of the official Apache AVRO python 2 implementation with the goal of greatly improving data read deserialization and write serialization performance.',
   license='Apache License 2.0',
   keywords='avro serialization rpc data',
-  url='http://avro.apache.org/',
+  url='http://github.com/pluralsight/spavro',
   extras_require={
     'snappy': ['python-snappy'],
   },
+  classifiers=[
+            "Development Status :: 4 - Beta",
+            "Intended Audience :: Developers",
+            "License :: OSI Approved :: Apache Software License",
+            "Programming Language :: Python",
+            "Programming Language :: Python :: 2.7",
+            "Programming Language :: Python :: 3.5",
+            "Topic :: Software Development :: Libraries",
+            "Topic :: System :: Networking",
+            "Operating System :: OS Independent",
+        ],
   tests_require=['nose'],
   test_suite='nose.collector'
 )
