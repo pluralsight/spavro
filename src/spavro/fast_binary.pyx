@@ -95,7 +95,7 @@ def make_union_reader(union_schema):
         '''Read the long index for which schema to process, then use that'''
         union_index = read_long(fo)
         return readers[union_index](fo)
-
+    union_reader.__reduce__ = lambda: (make_union_reader, (union_schema,))
     return union_reader
 
 
@@ -104,6 +104,7 @@ def make_record_reader(schema):
 
     def record_reader(fo):
         return {field.name: field.reader(fo) for field in fields if not (field.skip and field.reader(fo) is None)}
+    record_reader.__reduce__ = lambda: (make_record_reader, (schema,))
     return record_reader
 
 
@@ -112,6 +113,7 @@ def make_enum_reader(schema):
 
     def enum_reader(fo):
         return symbols[read_long(fo)]
+    enum_reader.__reduce__ = lambda: (make_enum_reader, (schema,))
     return enum_reader
 
 def make_array_reader(schema):
@@ -128,6 +130,7 @@ def make_array_reader(schema):
                 read_items.append(item_reader(fo))
             block_count = read_long(fo)
         return read_items
+    array_reader.__reduce__ = lambda: (make_array_reader, (schema,))
     return array_reader
 
 def make_map_reader(schema):
@@ -145,6 +148,7 @@ def make_map_reader(schema):
                 read_items[key] = value_reader(fo)
             block_count = read_long(fo)
         return read_items
+    map_reader.__reduce__ = lambda: (make_map_reader, (schema,))
     return map_reader
 
 def make_fixed_reader(schema):
@@ -152,6 +156,7 @@ def make_fixed_reader(schema):
 
     def fixed_reader(fo):
         return fo.read(size)
+    fixed_reader.__reduce__ = lambda: (make_fixed_reader, (schema,))
     return fixed_reader
 
 def make_null_reader(schema):
@@ -183,6 +188,7 @@ def make_skip_reader(schema):
     def read_skip(fo):
         value_reader(fo)
         return None
+    read_skip.__reduce__ = lambda: (make_skip_reader, (schema,))
     return read_skip
 
 
@@ -190,6 +196,7 @@ def make_default_reader(schema):
     value = schema["value"]
     def read_default(fo):
         return value
+    read_default.__reduce__ = lambda: (make_default_reader, (schema,))
     return read_default
 
 
@@ -501,7 +508,7 @@ def make_union_writer(union_schema):
         idx, data_writer = writer_lookup(datum)
         write_long(outbuf, idx)
         data_writer(outbuf, datum)
-
+    write_union.__reduce__ = lambda: (make_union_writer, (union_schema,))
     return write_union
 
 def make_enum_writer(schema):
@@ -511,6 +518,7 @@ def make_enum_writer(schema):
     def write_enum(outbuf, basestring datum):
         cdef int enum_index = symbols.index(datum)
         write_int(outbuf, enum_index)
+    write_enum.__reduce__ = lambda: (make_enum_writer, (schema,))
     return write_enum
 
 
@@ -520,6 +528,7 @@ def make_record_writer(schema):
     def write_record(outbuf, datum):
         for field in fields:
             field.writer(outbuf, datum.get(field.name))
+    write_record.__reduce__ = lambda: (make_record_writer, (schema,))
     return write_record
 
 
@@ -533,6 +542,7 @@ def make_array_writer(schema):
         for item in datum:
             item_writer(outbuf, item)
         write_long(outbuf, 0)
+    write_array.__reduce__ = lambda: (make_array_writer, (schema,))
     return write_array
 
 
@@ -547,6 +557,7 @@ def make_map_writer(schema):
             write_utf8(outbuf, key)
             map_value_writer(outbuf, val)
         write_long(outbuf, 0)
+    write_map.__reduce__ = lambda: (make_map_writer, (schema,))
     return write_map
 
 
