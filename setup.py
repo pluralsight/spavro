@@ -13,6 +13,8 @@ try:
 except ImportError:
     USE_CYTHON = False
 
+print("USE_CYTHON", USE_CYTHON)
+
 install_requires = ['six>=1.10.0']
 if version_info[:2] <= (2, 5):
     install_requires.append('simplejson >= 2.0.9')
