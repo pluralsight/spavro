@@ -45,7 +45,7 @@ setup(
   url='http://github.com/pluralsight/spavro',
   extras_require={
     'snappy': ['python-snappy'],
-    'test': ['pytest>=3.1.1]',
+    'test': ['pytest>=3.1.1'],
   },
   classifiers=[
             "Development Status :: 4 - Beta",
