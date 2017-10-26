@@ -45,6 +45,7 @@ setup(
   url='http://github.com/pluralsight/spavro',
   extras_require={
     'snappy': ['python-snappy'],
+    'test': ['pytest>=3.1.1]',
   },
   classifiers=[
             "Development Status :: 4 - Beta",
@@ -56,7 +57,5 @@ setup(
             "Topic :: Software Development :: Libraries",
             "Topic :: System :: Networking",
             "Operating System :: OS Independent",
-        ],
-  tests_require=['nose'],
-  test_suite='nose.collector'
+        ]
 )
