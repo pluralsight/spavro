@@ -151,7 +151,6 @@ def cat(opts, args):
 
 
 def _open(filename, mode):
-    print(filename)
     if filename == "-":
         return {
             "rb": binstdin,
@@ -193,9 +192,7 @@ def convert_union(value, field):
 
 def iter_csv(info, schema):
     header = [field.name for field in schema.fields]
-    # print(list((x.decode('utf-8') for x in info)))
     for row in csv.reader((x.decode('utf-8') for x in info)):
-        print(row)
         values = [convert(v, f) for v, f in zip(row, schema.fields)]
         yield dict(zip(header, values))
 
