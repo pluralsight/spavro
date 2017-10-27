@@ -27,7 +27,8 @@ else:
   from . import TetherTask, find_port, inputProtocol
 
 from spavro import ipc
-from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+import six
+from six.moves.BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 import logging
 import weakref
 import threading
@@ -210,7 +211,7 @@ if __name__ == '__main__':
   logging.basicConfig(level=logging.INFO)
 
   if (len(sys.argv)<=1):
-    print "Error: tether_task_runner.__main__: Usage: tether_task_runner task_package.task_module.TaskClass"
+    print("Error: tether_task_runner.__main__: Usage: tether_task_runner task_package.task_module.TaskClass")
     raise ValueError("Usage: tether_task_runner task_package.task_module.TaskClass")
 
   fullcls=sys.argv[1]
