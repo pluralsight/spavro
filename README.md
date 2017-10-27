@@ -1,3 +1,5 @@
+[![Spavro Build](https://travis-ci.org/pluralsight/spavro.svg?branch=master)](https://travis-ci.org/pluralsight/spavro)
+
 # (Sp)eedier Avro - Spavro
 
 Spavro is a fork of the official Apache AVRO python 2 implementation with the goal of greatly improving data read deserialization and write serialization performance.
