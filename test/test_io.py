@@ -24,7 +24,10 @@ from six import BytesIO as StringIO
 #   from StringIO import StringIO
 from binascii import hexlify
 
-import set_avro_test_path
+try:
+    type(unicode)
+except NameError:
+    unicode = str
 
 from spavro import schema
 from spavro import io
@@ -33,12 +36,12 @@ SCHEMAS_TO_VALIDATE = (
   ('"null"', None),
   ('"boolean"', True),
   ('"string"', unicode('adsfasdf09809dsf-=adsf')),
-  ('"bytes"', '12345abcd'),
+  ('"bytes"', b'12345abcd'),
   ('"int"', 1234),
   ('"long"', 1234),
   ('"float"', 1234.0),
   ('"double"', 1234.0),
-  ('{"type": "fixed", "name": "Test", "size": 1}', 'B'),
+  ('{"type": "fixed", "name": "Test", "size": 1}', b'B'),
   ('{"type": "enum", "name": "Test", "symbols": ["A", "B"]}', 'B'),
   ('{"type": "array", "items": "long"}', [1, 3, 2]),
   ('{"type": "map", "values": "long"}', {'a': 1, 'b': 3, 'c': 2}),
@@ -61,15 +64,15 @@ SCHEMAS_TO_VALIDATE = (
 )
 
 BINARY_ENCODINGS = (
-  (0, '00'),
-  (-1, '01'),
-  (1, '02'),
-  (-2, '03'),
-  (2, '04'),
-  (-64, '7f'),
-  (64, '80 01'),
-  (8192, '80 80 01'),
-  (-8193, '81 80 01'),
+  (0, b'00'),
+  (-1, b'01'),
+  (1, b'02'),
+  (-2, b'03'),
+  (2, b'04'),
+  (-64, b'7f'),
+  (64, b'80 01'),
+  (8192, b'80 80 01'),
+  (-8193, b'81 80 01'),
 )
 
 DEFAULT_VALUE_EXAMPLES = (
@@ -111,14 +114,14 @@ def avro_hexlify(reader):
   while (ord(current_byte) & 0x80) != 0:
     current_byte = reader.read(1)
     bytes.append(hexlify(current_byte))
-  return ' '.join(bytes)
+  return b' '.join(bytes)
 
 # @unittest.skip("skip test name")
 def print_name(test_name):
-  print ''
-  print test_name
-  print '=' * len(test_name)
-  print ''
+  print('')
+  print(test_name)
+  print('=' * len(test_name))
+  print('')
 
 def write_datum(datum, writers_schema):
   writer = StringIO()
@@ -137,17 +140,17 @@ def check_binary_encoding(number_type):
   print_name('TEST BINARY %s ENCODING' % number_type.upper())
   correct = 0
   for datum, hex_encoding in BINARY_ENCODINGS:
-    print 'Datum: %d' % datum
-    print 'Correct Encoding: %s' % hex_encoding
+    print('Datum: %d' % datum)
+    print('Correct Encoding: %s' % hex_encoding)
 
     writers_schema = schema.parse('"%s"' % number_type.lower())
     writer, encoder, datum_writer = write_datum(datum, writers_schema)
     writer.seek(0)
     hex_val = avro_hexlify(writer)
 
-    print 'Read Encoding: %s' % hex_val
+    print('Read Encoding: %s' % hex_val)
     if hex_encoding == hex_val: correct += 1
-    print ''
+    print('')
   return correct
 
 def check_skip_number(number_type):
@@ -155,7 +158,7 @@ def check_skip_number(number_type):
   correct = 0
   for value_to_skip, hex_encoding in BINARY_ENCODINGS:
     VALUE_TO_READ = 6253
-    print 'Value to Skip: %d' % value_to_skip
+    print('Value to Skip: %d' % value_to_skip)
 
     # write the value to skip and a known value
     writers_schema = schema.parse('"%s"' % number_type.lower())
@@ -171,9 +174,9 @@ def check_skip_number(number_type):
     datum_reader = io.DatumReader(writers_schema)
     read_value = datum_reader.read(decoder)
 
-    print 'Read Value: %d' % read_value
+    print('Read Value: %d' % read_value)
     if read_value == VALUE_TO_READ: correct += 1
-    print ''
+    print('')
   return correct
     
 class TestIO(unittest.TestCase):
@@ -185,10 +188,10 @@ class TestIO(unittest.TestCase):
     print_name('TEST VALIDATE')
     passed = 0
     for example_schema, datum in SCHEMAS_TO_VALIDATE:
-      print 'Schema: %s' % example_schema
-      print 'Datum: %s' % datum
+      print('Schema: %s' % example_schema)
+      print('Datum: %s' % datum)
       validated = io.validate(schema.parse(example_schema), datum)
-      print 'Valid: %s' % validated
+      print('Valid: %s' % validated)
       if validated: passed += 1
     self.assertEquals(passed, len(SCHEMAS_TO_VALIDATE))
 
@@ -196,15 +199,18 @@ class TestIO(unittest.TestCase):
     print_name('TEST ROUND TRIP')
     correct = 0
     for example_schema, datum in SCHEMAS_TO_VALIDATE:
-      print 'Schema: %s' % example_schema
-      print 'Datum: %s' % datum
+      print('Schema: %s' % example_schema)
+      print('Datum: %s' % datum)
 
       writers_schema = schema.parse(example_schema)
       writer, encoder, datum_writer = write_datum(datum, writers_schema)
       round_trip_datum = read_datum(writer, writers_schema)
 
-      print 'Round Trip Datum: %s' % round_trip_datum
-      if datum == round_trip_datum: correct += 1
+      print('Round Trip Datum: %s' % round_trip_datum)
+      if datum == round_trip_datum:
+        correct += 1
+      else:
+        print("Mismatch: {} != {}".format(datum, round_trip_datum))
     self.assertEquals(correct, len(SCHEMAS_TO_VALIDATE))
 
   #
@@ -244,8 +250,8 @@ class TestIO(unittest.TestCase):
         readers_schema = schema.parse(rs)
         writer, enc, dw = write_datum(datum_to_write, writers_schema)
         datum_read = read_datum(writer, writers_schema, readers_schema)
-        print 'Writer: %s Reader: %s' % (writers_schema, readers_schema)
-        print 'Datum Read: %s' % datum_read
+        print('Writer: %s Reader: %s' % (writers_schema, readers_schema))
+        print('Datum Read: %s' % datum_read)
         if datum_read != datum_to_write: incorrect += 1
     self.assertEquals(incorrect, 0)
 
@@ -282,7 +288,7 @@ class TestIO(unittest.TestCase):
 
       writer, encoder, datum_writer = write_datum(datum_to_write, writers_schema)
       datum_read = read_datum(writer, writers_schema, readers_schema)
-      print 'Datum Read: %s' % datum_read
+      print('Datum Read: %s' % datum_read)
       if datum_to_read == datum_read: correct += 1
     self.assertEquals(correct, len(DEFAULT_VALUE_EXAMPLES))
 
@@ -315,7 +321,7 @@ class TestIO(unittest.TestCase):
 
     writer, encoder, datum_writer = write_datum(datum_to_write, writers_schema)
     datum_read = read_datum(writer, writers_schema, readers_schema)
-    print 'Datum Read: %s' % datum_read
+    print('Datum Read: %s' % datum_read)
     self.assertEquals(datum_to_read, datum_read)
 
   def test_field_order(self):
@@ -331,7 +337,7 @@ class TestIO(unittest.TestCase):
 
     writer, encoder, datum_writer = write_datum(datum_to_write, writers_schema)
     datum_read = read_datum(writer, writers_schema, readers_schema)
-    print 'Datum Read: %s' % datum_read
+    print('Datum Read: %s' % datum_read)
     self.assertEquals(datum_to_read, datum_read)
 
   def test_type_exception(self):

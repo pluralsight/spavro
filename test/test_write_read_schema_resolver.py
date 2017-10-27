@@ -60,7 +60,7 @@ pass_cases = (
 
 exception_cases = (
 ("null_vs_int", "null", "int", SchemaResolutionException),
-("noolean_vs_int", "boolean", "int", SchemaResolutionException),
+("boolean_vs_int", "boolean", "int", SchemaResolutionException),
 ("lower_precision_promote_long_int", "long", "int", SchemaResolutionException),
 ("lower_precision_promote_double_float", "double", "float", SchemaResolutionException),
 ("missing_symbol_in_read",

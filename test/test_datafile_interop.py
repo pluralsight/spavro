@@ -18,20 +18,18 @@
 import os
 import unittest
 
-import set_avro_test_path
-
 from spavro import io
 from spavro import datafile
 
 class TestDataFileInterop(unittest.TestCase):
   def test_interop(self):
-    print ''
-    print 'TEST INTEROP'
-    print '============'
-    print ''
+    print('')
+    print('TEST INTEROP')
+    print('============')
+    print('')
     for f in os.listdir('./interop'):
-      print 'READING %s' % f
-      print ''
+      print('READING %s' % f)
+      print('')
 
       # read data in binary from file
       reader = open(os.path.join('./interop', f), 'rb')

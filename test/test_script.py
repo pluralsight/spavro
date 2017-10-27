@@ -17,7 +17,9 @@
 # limitations under the License.
 import unittest
 import csv
-from cStringIO import StringIO
+# import six
+from six import BytesIO, StringIO
+import re
 try:
     import json
 except ImportError:
@@ -29,6 +31,8 @@ from spavro.datafile import DataFileWriter
 from os.path import dirname, join, isfile
 from os import remove
 from operator import itemgetter
+
+SPACE_CHARS = re.compile(r'\s+')
 
 NUM_RECORDS = 7
 
@@ -64,25 +68,25 @@ SCHEMA = '''
 '''
 
 LOONIES = (
-    ("daffy", "duck", "duck"),
-    ("bugs", "bunny", "bunny"),
-    ("tweety", "", "bird"),
-    ("road", "runner", "bird"),
-    ("wile", "e", "coyote"),
-    ("pepe", "le pew", "skunk"),
-    ("foghorn", "leghorn", "rooster"),
+    (u"daffy", u"duck", u"duck"),
+    (u"bugs", u"bunny", u"bunny"),
+    (u"tweety", u"", u"bird"),
+    (u"road", u"runner", u"bird"),
+    (u"wile", u"e", u"coyote"),
+    (u"pepe", u"le pew", u"skunk"),
+    (u"foghorn", u"leghorn", u"rooster"),
 )
 
 def looney_records():
     for f, l, t in LOONIES:
-        yield {"first": f, "last" : l, "type" : t}
+        yield {"first": f, "last": l, "type": t}
 
 SCRIPT = join(dirname(__file__), "..", "scripts", "avro")
 
 _JSON_PRETTY = '''{
-    "type": "duck", 
-    "last": "duck", 
-    "first": "daffy"
+    "first": "daffy",
+    "last": "duck",
+    "type": "duck"
 }'''
 
 def gen_avro(filename):
@@ -94,8 +98,10 @@ def gen_avro(filename):
     writer.close()
     fo.close()
 
+
 def tempfile():
     return NamedTemporaryFile(delete=False).name
+
 
 class TestCat(unittest.TestCase):
     def setUp(self):
@@ -107,7 +113,9 @@ class TestCat(unittest.TestCase):
             remove(self.avro_file)
 
     def _run(self, *args, **kw):
-        out = check_output([SCRIPT, "cat", self.avro_file] + list(args))
+        out = check_output([SCRIPT, "cat", self.avro_file] + list(args)).decode('utf-8')
+        # subprocess returns bytes, decode into utf8 strings
+        # Note: should this be ASCII instead?
         if kw.get("raw"):
             return out
         else:
@@ -124,14 +132,15 @@ class TestCat(unittest.TestCase):
         return len(self._run("--skip", str(skip))) == NUM_RECORDS - skip
 
     def test_csv(self):
-        reader = csv.reader(StringIO(self._run("-f", "csv", raw=True)))
+        raw = self._run("-f", "csv", raw=True)
+        reader = csv.reader(StringIO(raw))
         assert len(list(reader)) == NUM_RECORDS
 
     def test_csv_header(self):
+        '''Test the CSV header is processed correctly'''
         io = StringIO(self._run("-f", "csv", "--header", raw=True))
         reader = csv.DictReader(io)
-        r = {"type": "duck", "last": "duck", "first": "daffy"}
-        assert next(reader) == r
+        self.assertEqual(reader.fieldnames, ['first', 'last', 'type'])
 
     def test_print_schema(self):
         out = self._run("--print-schema", raw=True)
@@ -144,10 +153,12 @@ class TestCat(unittest.TestCase):
 
     def test_json_pretty(self):
         out = self._run("--format", "json-pretty", "-n", "1", raw=1)
-        assert out.strip() == _JSON_PRETTY.strip()
+        clean_out = SPACE_CHARS.sub('', out)
+        example = SPACE_CHARS.sub('', _JSON_PRETTY)
+        self.assertEqual(example, clean_out)
 
     def test_version(self):
-        check_output([SCRIPT, "cat", "--version"])
+        check_output([SCRIPT, "cat", "--version"]).decode('utf-8')
 
     def test_files(self):
         out = self._run(self.avro_file)
@@ -206,7 +217,7 @@ class TestWrite(unittest.TestCase):
         check_call(args, **kw)
 
     def load_avro(self, filename):
-        out = check_output([SCRIPT, "cat", filename])
+        out = check_output([SCRIPT, "cat", filename]).decode('utf-8')
         return map(json.loads, out.splitlines())
 
     def test_version(self):
@@ -218,7 +229,7 @@ class TestWrite(unittest.TestCase):
         self._run(filename, "-f", format, stdout=fo)
         fo.close()
 
-        records = self.load_avro(tmp)
+        records = list(self.load_avro(tmp))
         assert len(records) == NUM_RECORDS
         assert records[0]["first"] == "daffy"
 
@@ -235,7 +246,7 @@ class TestWrite(unittest.TestCase):
         remove(tmp)
         self._run(self.json_file, "-o", tmp)
 
-        assert len(self.load_avro(tmp)) == NUM_RECORDS
+        assert len(list(self.load_avro(tmp))) == NUM_RECORDS
         remove(tmp)
 
     def test_multi_file(self):
@@ -243,8 +254,7 @@ class TestWrite(unittest.TestCase):
         fo = open(tmp, "wb")
         self._run(self.json_file, self.json_file, stdout=fo)
         fo.close()
-
-        assert len(self.load_avro(tmp)) == 2 * NUM_RECORDS
+        assert len(list(self.load_avro(tmp))) == 2 * NUM_RECORDS
         remove(tmp)
 
     def test_stdin(self):
@@ -255,5 +265,5 @@ class TestWrite(unittest.TestCase):
         self._run("--input-type", "json", stdin=info, stdout=fo)
         fo.close()
 
-        assert len(self.load_avro(tmp)) == NUM_RECORDS
+        assert len(list(self.load_avro(tmp))) == NUM_RECORDS
         remove(tmp)

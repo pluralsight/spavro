@@ -19,15 +19,13 @@
 Test the schema parsing logic.
 """
 import unittest
-import set_avro_test_path
-
 from spavro import schema
 
 def print_name(test_name):
-  print ''
-  print test_name
-  print '=' * len(test_name)
-  print ''
+  print('')
+  print(test_name)
+  print('=' * len(test_name))
+  print('')
 
 class ExampleSchema(object):
   def __init__(self, schema_string, valid, name='', comment=''):
@@ -309,7 +307,7 @@ EXAMPLES += DOC_EXAMPLES
 VALID_EXAMPLES = [e for e in EXAMPLES if e.valid]
 
 # TODO(hammer): refactor into harness for examples
-# TODO(hammer): pretty-print detailed output
+# TODO(hammer): pretty-print(detailed output)
 # TODO(hammer): make verbose flag
 # TODO(hammer): show strack trace to user
 # TODO(hammer): use logging module?
@@ -475,17 +473,8 @@ class TestSchema(unittest.TestCase):
 
   def test_exception_is_not_swallowed_on_parse_error(self):
     print_name('TEST EXCEPTION NOT SWALLOWED ON PARSE ERROR')
-
-    try:
+    with self.assertRaises(schema.SchemaParseException) as context:
         schema.parse('/not/a/real/file')
-        caught_exception = False
-    except schema.SchemaParseException, e:
-        expected_message = 'Error parsing JSON: /not/a/real/file, error = ' \
-                           'No JSON object could be decoded'
-        self.assertEqual(expected_message, e.args[0])
-        caught_exception = True
-
-    self.assertTrue(caught_exception, 'Exception was not caught')
 
 if __name__ == '__main__':
   unittest.main()

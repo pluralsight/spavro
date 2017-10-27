@@ -1,10 +1,16 @@
 # Copyright (C) 2017 Pluralsight LLC
 
 import unittest
+import six
+from six import BytesIO as StringIO
+# try:
+#   from cStringIO import StringIO
+# except ImportError:
+#   from StringIO import StringIO
 try:
-  from cStringIO import StringIO
-except ImportError:
-  from StringIO import StringIO
+    type(unicode)
+except NameError:
+    unicode = str
 
 import json
 import spavro.schema
@@ -26,7 +32,7 @@ cases = (
 ("double", "double", 1234.12345),
 ("boolean", "boolean", True),
 ("string", "string", unicode('adsfasdf09809dsf-=adsf')),
-("a_fixed_record", {"type": "fixed", "size": 4, "name": "fixeddata"}, 'Obj\x01'),
+("a_fixed_record", {"type": "fixed", "size": 4, "name": "fixeddata"}, b'Obj\x01'),
 ("an_enum_record", {"type": "enum", "symbols": ["A", "B", "C"], "name": "enumdata"}, "A"),
 ("an_array", {"type": "array", "items": "int"}, [1, 2, 3, 1234, 4321]),
 ("a_map", {"type": "map", "values": "int"}, {"L1": 1, "L2": 2, "L3": 3, "L4": 4}),
@@ -56,7 +62,7 @@ cases = (
                                                         {"name": "fieldA2", "type": "string"}]},
      {"type": "record", "name": "recorddata2", "fields": [{"name": "fieldB1", "type": {"type": "fixed", "name": "fixedbytes", "size": 4}},
                                                            {"name": "fieldB2", "type": "string"}]}],
- {"fieldB1": '\x01\x02\x03\x04', "fieldB2": unicode("Nother Record")})
+ {"fieldB1": b'\x01\x02\x03\x04', "fieldB2": unicode("Nother Record")})
 )
 
 
