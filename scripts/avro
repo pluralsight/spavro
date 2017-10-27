@@ -27,9 +27,24 @@ except ImportError:
     import simplejson as json
 import csv
 from sys import stdout, stdin
-from itertools import ifilter, imap
+import six
+from six.moves import filter as ifilter
+from six.moves import map as imap
+from six.moves import range as xrange
+from six import string_types as basestring
+# from itertools import ifilter, imap
 from functools import partial
 from os.path import splitext
+import sys
+
+# python3 support
+try:
+    type(long)
+except NameError:
+    long = int
+
+binstdin = getattr(sys.stdin, "buffer", sys.stdin)
+binstdout = getattr(sys.stdout, "buffer", sys.stdout)
 
 
 class AvroError(Exception):
@@ -41,7 +56,7 @@ def print_json(row):
 
 
 def print_json_pretty(row):
-    print(json.dumps(row, indent=4))
+    print(json.dumps(row, indent=4, sort_keys=True))
 
 
 _write_row = csv.writer(stdout).writerow
@@ -109,10 +124,12 @@ def print_avro(avro, opts):
             break
         printer(record)
 
+
 def print_schema(avro):
-    schema = avro.meta["avro.schema"]
+    schema = avro.meta["avro.schema"].decode('utf-8')
     # Pretty print
-    print json.dumps(json.loads(schema), indent=4)
+    print(json.dumps(json.loads(schema), indent=4, sort_keys=True))
+
 
 def cat(opts, args):
     if not args:
@@ -121,7 +138,7 @@ def cat(opts, args):
     for filename in args:
         try:
             fo = open(filename, "rb")
-        except (OSError, IOError), e:
+        except (OSError, IOError) as e:
             raise AvroError("Can't open %s - %s" % (filename, e))
 
         avro = DataFileReader(fo, DatumReader())
@@ -132,34 +149,39 @@ def cat(opts, args):
 
         print_avro(avro, opts)
 
+
 def _open(filename, mode):
+    print(filename)
     if filename == "-":
         return {
-            "rb" : stdin,
-            "wb" : stdout
+            "rb": binstdin,
+            "wb": binstdout
         }[mode]
 
     return open(filename, mode)
 
+
 def iter_json(info, _):
-    return imap(json.loads, info)
+    return imap(lambda x: json.loads(x.decode('utf-8')), info)
+
 
 def convert(value, field):
     type = field.type.type
     if type == "union":
         return convert_union(value, field)
 
-    return  {
-        "int" : int,
-        "long" : long,
-        "float" : float,
-        "double" : float,
-        "string" : str,
-        "bytes" : str,
-        "boolean" : bool,
-        "null" : lambda _: None,
-        "union" : lambda v: convert_union(v, field),
+    return {
+        "int": int,
+        "long": long,
+        "float": float,
+        "double": float,
+        "string": str,
+        "bytes": str,
+        "boolean": bool,
+        "null": lambda _: None,
+        "union": lambda v: convert_union(v, field),
     }[type](value)
+
 
 def convert_union(value, field):
     for name in [s.name for s in field.type.schemas]:
@@ -168,11 +190,15 @@ def convert_union(value, field):
         except ValueError:
             continue
 
+
 def iter_csv(info, schema):
     header = [field.name for field in schema.fields]
-    for row in csv.reader(info):
+    # print(list((x.decode('utf-8') for x in info)))
+    for row in csv.reader((x.decode('utf-8') for x in info)):
+        print(row)
         values = [convert(v, f) for v, f in zip(row, schema.fields)]
         yield dict(zip(header, values))
+
 
 def guess_input_type(files):
     if not files:
@@ -186,6 +212,7 @@ def guess_input_type(files):
 
     return None
 
+
 def write(opts, files):
     if not opts.schema:
         raise AvroError("No schema specified")
@@ -195,20 +222,20 @@ def write(opts, files):
         raise AvroError("Can't guess input file type (not .json or .csv)")
 
     try:
-        schema = spavro.schema.parse(open(opts.schema, "rb").read())
+        schema = spavro.schema.parse(open(opts.schema, "rb").read().decode('utf-8'))
         out = _open(opts.output, "wb")
-    except (IOError, OSError), e:
+    except (IOError, OSError) as e:
         raise AvroError("Can't open file - %s" % e)
 
     writer = DataFileWriter(out, DatumWriter(), schema)
-
-    iter_records = {"json" : iter_json, "csv" : iter_csv}[input_type]
+    iter_records = {"json": iter_json, "csv": iter_csv}[input_type]
     for filename in (files or ["-"]):
         info = _open(filename, "rb")
         for record in iter_records(info, schema):
             writer.append(record)
 
     writer.close()
+
 
 def main(argv=None):
     import sys
@@ -260,11 +287,10 @@ def main(argv=None):
             write(opts, args)
         else:
             raise AvroError("Unknown command - %s" % command)
-    except AvroError, e:
+    except AvroError as e:
         parser.error("%s" % e) # Will exit
-    except Exception, e:
+    except Exception as e:
         raise SystemExit("panic: %s" % e)
 
 if __name__ == "__main__":
     main()
-
