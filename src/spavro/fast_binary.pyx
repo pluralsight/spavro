@@ -6,13 +6,12 @@ The main edge this code has is that it parses the schema only once and creates
 a reader/writer call tree from the schema shape. All reads and writes then
 no longer consult the schema saving lookups.'''
 
-cdef long read_long(fo):
+cdef long long read_long(fo):
     '''Read a long using zig-zag binary encoding'''
     cdef:
         unsigned long long accum
         int temp_datum
         char* c_raw
-        long long result
         int shift = 7
     raw = fo.read(1)
     c_raw = raw
@@ -24,8 +23,7 @@ cdef long read_long(fo):
         temp_datum = <int>c_raw[0]
         accum |= (temp_datum & 0x7F) << shift
         shift += 7
-    result = (accum >> 1) ^ -(accum & 1)
-    return result
+    return (accum >> 1) ^ -(accum & 1)
 
 cdef bytes read_bytes(fo):
     '''Bytes are a marker for length of bytes and then binary data'''
