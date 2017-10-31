@@ -7133,7 +7133,7 @@ static PyObject *__pyx_pf_6spavro_11fast_binary_17ReaderPlaceholder_2__call__(CY
  * 
  * def get_reader(schema):             # <<<<<<<<<<<<<<
  *     cdef unicode schema_type = get_type(schema)
- *     if schema_type in ('record', 'fixed'):
+ *     if schema_type in ('record', 'fixed', 'enum'):
  */
 
 /* Python wrapper */
@@ -7178,7 +7178,7 @@ static PyObject *__pyx_pf_6spavro_11fast_binary_34get_reader(CYTHON_UNUSED PyObj
  * 
  * def get_reader(schema):
  *     cdef unicode schema_type = get_type(schema)             # <<<<<<<<<<<<<<
- *     if schema_type in ('record', 'fixed'):
+ *     if schema_type in ('record', 'fixed', 'enum'):
  *         placeholder = ReaderPlaceholder()
  */
   __pyx_t_1 = __pyx_f_6spavro_11fast_binary_get_type(__pyx_v_schema, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 230, __pyx_L1_error)
@@ -7189,7 +7189,7 @@ static PyObject *__pyx_pf_6spavro_11fast_binary_34get_reader(CYTHON_UNUSED PyObj
   /* "spavro/fast_binary.pyx":231
  * def get_reader(schema):
  *     cdef unicode schema_type = get_type(schema)
- *     if schema_type in ('record', 'fixed'):             # <<<<<<<<<<<<<<
+ *     if schema_type in ('record', 'fixed', 'enum'):             # <<<<<<<<<<<<<<
  *         placeholder = ReaderPlaceholder()
  *         # using a placeholder because this is recursive and the reader isn't defined
  */
@@ -7204,15 +7204,22 @@ static PyObject *__pyx_pf_6spavro_11fast_binary_34get_reader(CYTHON_UNUSED PyObj
   }
   __pyx_t_5 = (__Pyx_PyUnicode_Equals(__pyx_t_2, __pyx_n_s_fixed, Py_EQ)); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 231, __pyx_L1_error)
   __pyx_t_4 = (__pyx_t_5 != 0);
-  __pyx_t_3 = __pyx_t_4;
+  if (!__pyx_t_4) {
+  } else {
+    __pyx_t_3 = __pyx_t_4;
+    goto __pyx_L4_bool_binop_done;
+  }
+  __pyx_t_4 = (__Pyx_PyUnicode_Equals(__pyx_t_2, __pyx_n_s_enum, Py_EQ)); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 231, __pyx_L1_error)
+  __pyx_t_5 = (__pyx_t_4 != 0);
+  __pyx_t_3 = __pyx_t_5;
   __pyx_L4_bool_binop_done:;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_4 = (__pyx_t_3 != 0);
-  if (__pyx_t_4) {
+  __pyx_t_5 = (__pyx_t_3 != 0);
+  if (__pyx_t_5) {
 
     /* "spavro/fast_binary.pyx":232
  *     cdef unicode schema_type = get_type(schema)
- *     if schema_type in ('record', 'fixed'):
+ *     if schema_type in ('record', 'fixed', 'enum'):
  *         placeholder = ReaderPlaceholder()             # <<<<<<<<<<<<<<
  *         # using a placeholder because this is recursive and the reader isn't defined
  *         # yet and nested records might refer to this parent schema name
@@ -7277,8 +7284,8 @@ static PyObject *__pyx_pf_6spavro_11fast_binary_34get_reader(CYTHON_UNUSED PyObj
  *            namspace_record_name = '.'.join([namespace, record_name])
  *         else:
  */
-    __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_v_namespace); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 237, __pyx_L1_error)
-    if (__pyx_t_4) {
+    __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_v_namespace); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 237, __pyx_L1_error)
+    if (__pyx_t_5) {
 
       /* "spavro/fast_binary.pyx":238
  *         record_name = schema.get('name')
@@ -7308,7 +7315,7 @@ static PyObject *__pyx_pf_6spavro_11fast_binary_34get_reader(CYTHON_UNUSED PyObj
  *            namspace_record_name = '.'.join([namespace, record_name])
  *         else:
  */
-      goto __pyx_L6;
+      goto __pyx_L7;
     }
 
     /* "spavro/fast_binary.pyx":240
@@ -7322,7 +7329,7 @@ static PyObject *__pyx_pf_6spavro_11fast_binary_34get_reader(CYTHON_UNUSED PyObj
       __Pyx_INCREF(__pyx_v_record_name);
       __pyx_v_namspace_record_name = __pyx_v_record_name;
     }
-    __pyx_L6:;
+    __pyx_L7:;
 
     /* "spavro/fast_binary.pyx":241
  *         else:
@@ -7418,7 +7425,7 @@ static PyObject *__pyx_pf_6spavro_11fast_binary_34get_reader(CYTHON_UNUSED PyObj
     /* "spavro/fast_binary.pyx":231
  * def get_reader(schema):
  *     cdef unicode schema_type = get_type(schema)
- *     if schema_type in ('record', 'fixed'):             # <<<<<<<<<<<<<<
+ *     if schema_type in ('record', 'fixed', 'enum'):             # <<<<<<<<<<<<<<
  *         placeholder = ReaderPlaceholder()
  *         # using a placeholder because this is recursive and the reader isn't defined
  */
@@ -7447,9 +7454,9 @@ static PyObject *__pyx_pf_6spavro_11fast_binary_34get_reader(CYTHON_UNUSED PyObj
  *     except KeyError:
  *         reader = schema_cache[schema_type]
  */
-      __pyx_t_7 = __Pyx_GetModuleGlobalName(__pyx_n_s_reader_type_map); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 248, __pyx_L7_error)
+      __pyx_t_7 = __Pyx_GetModuleGlobalName(__pyx_n_s_reader_type_map); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 248, __pyx_L8_error)
       __Pyx_GOTREF(__pyx_t_7);
-      __pyx_t_8 = PyObject_GetItem(__pyx_t_7, __pyx_v_schema_type); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 248, __pyx_L7_error)
+      __pyx_t_8 = PyObject_GetItem(__pyx_t_7, __pyx_v_schema_type); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 248, __pyx_L8_error)
       __Pyx_GOTREF(__pyx_t_8);
       __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
       __pyx_t_7 = NULL;
@@ -7463,13 +7470,13 @@ static PyObject *__pyx_pf_6spavro_11fast_binary_34get_reader(CYTHON_UNUSED PyObj
         }
       }
       if (!__pyx_t_7) {
-        __pyx_t_6 = __Pyx_PyObject_CallOneArg(__pyx_t_8, __pyx_v_schema); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 248, __pyx_L7_error)
+        __pyx_t_6 = __Pyx_PyObject_CallOneArg(__pyx_t_8, __pyx_v_schema); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 248, __pyx_L8_error)
         __Pyx_GOTREF(__pyx_t_6);
       } else {
         #if CYTHON_FAST_PYCALL
         if (PyFunction_Check(__pyx_t_8)) {
           PyObject *__pyx_temp[2] = {__pyx_t_7, __pyx_v_schema};
-          __pyx_t_6 = __Pyx_PyFunction_FastCall(__pyx_t_8, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 248, __pyx_L7_error)
+          __pyx_t_6 = __Pyx_PyFunction_FastCall(__pyx_t_8, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 248, __pyx_L8_error)
           __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
           __Pyx_GOTREF(__pyx_t_6);
         } else
@@ -7477,19 +7484,19 @@ static PyObject *__pyx_pf_6spavro_11fast_binary_34get_reader(CYTHON_UNUSED PyObj
         #if CYTHON_FAST_PYCCALL
         if (__Pyx_PyFastCFunction_Check(__pyx_t_8)) {
           PyObject *__pyx_temp[2] = {__pyx_t_7, __pyx_v_schema};
-          __pyx_t_6 = __Pyx_PyCFunction_FastCall(__pyx_t_8, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 248, __pyx_L7_error)
+          __pyx_t_6 = __Pyx_PyCFunction_FastCall(__pyx_t_8, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 248, __pyx_L8_error)
           __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
           __Pyx_GOTREF(__pyx_t_6);
         } else
         #endif
         {
-          __pyx_t_1 = PyTuple_New(1+1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 248, __pyx_L7_error)
+          __pyx_t_1 = PyTuple_New(1+1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 248, __pyx_L8_error)
           __Pyx_GOTREF(__pyx_t_1);
           __Pyx_GIVEREF(__pyx_t_7); PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_t_7); __pyx_t_7 = NULL;
           __Pyx_INCREF(__pyx_v_schema);
           __Pyx_GIVEREF(__pyx_v_schema);
           PyTuple_SET_ITEM(__pyx_t_1, 0+1, __pyx_v_schema);
-          __pyx_t_6 = __Pyx_PyObject_Call(__pyx_t_8, __pyx_t_1, NULL); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 248, __pyx_L7_error)
+          __pyx_t_6 = __Pyx_PyObject_Call(__pyx_t_8, __pyx_t_1, NULL); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 248, __pyx_L8_error)
           __Pyx_GOTREF(__pyx_t_6);
           __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
         }
@@ -7509,8 +7516,8 @@ static PyObject *__pyx_pf_6spavro_11fast_binary_34get_reader(CYTHON_UNUSED PyObj
     __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
     __Pyx_XDECREF(__pyx_t_10); __pyx_t_10 = 0;
     __Pyx_XDECREF(__pyx_t_11); __pyx_t_11 = 0;
-    goto __pyx_L14_try_end;
-    __pyx_L7_error:;
+    goto __pyx_L15_try_end;
+    __pyx_L8_error:;
     __Pyx_PyThreadState_assign
     __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
     __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
@@ -7528,7 +7535,7 @@ static PyObject *__pyx_pf_6spavro_11fast_binary_34get_reader(CYTHON_UNUSED PyObj
     __pyx_t_12 = __Pyx_PyErr_ExceptionMatches(__pyx_builtin_KeyError);
     if (__pyx_t_12) {
       __Pyx_AddTraceback("spavro.fast_binary.get_reader", __pyx_clineno, __pyx_lineno, __pyx_filename);
-      if (__Pyx_GetException(&__pyx_t_6, &__pyx_t_8, &__pyx_t_1) < 0) __PYX_ERR(0, 249, __pyx_L9_except_error)
+      if (__Pyx_GetException(&__pyx_t_6, &__pyx_t_8, &__pyx_t_1) < 0) __PYX_ERR(0, 249, __pyx_L10_except_error)
       __Pyx_GOTREF(__pyx_t_6);
       __Pyx_GOTREF(__pyx_t_8);
       __Pyx_GOTREF(__pyx_t_1);
@@ -7540,9 +7547,9 @@ static PyObject *__pyx_pf_6spavro_11fast_binary_34get_reader(CYTHON_UNUSED PyObj
  * 
  *     return reader
  */
-      __pyx_t_7 = __Pyx_GetModuleGlobalName(__pyx_n_s_schema_cache); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 250, __pyx_L9_except_error)
+      __pyx_t_7 = __Pyx_GetModuleGlobalName(__pyx_n_s_schema_cache); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 250, __pyx_L10_except_error)
       __Pyx_GOTREF(__pyx_t_7);
-      __pyx_t_13 = PyObject_GetItem(__pyx_t_7, __pyx_v_schema_type); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 250, __pyx_L9_except_error)
+      __pyx_t_13 = PyObject_GetItem(__pyx_t_7, __pyx_v_schema_type); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 250, __pyx_L10_except_error)
       __Pyx_GOTREF(__pyx_t_13);
       __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
       __Pyx_XDECREF_SET(__pyx_v_reader, __pyx_t_13);
@@ -7550,10 +7557,10 @@ static PyObject *__pyx_pf_6spavro_11fast_binary_34get_reader(CYTHON_UNUSED PyObj
       __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
       __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-      goto __pyx_L8_exception_handled;
+      goto __pyx_L9_exception_handled;
     }
-    goto __pyx_L9_except_error;
-    __pyx_L9_except_error:;
+    goto __pyx_L10_except_error;
+    __pyx_L10_except_error:;
 
     /* "spavro/fast_binary.pyx":247
  *         placeholder.reader = reader
@@ -7568,13 +7575,13 @@ static PyObject *__pyx_pf_6spavro_11fast_binary_34get_reader(CYTHON_UNUSED PyObj
     __Pyx_XGIVEREF(__pyx_t_11);
     __Pyx_ExceptionReset(__pyx_t_9, __pyx_t_10, __pyx_t_11);
     goto __pyx_L1_error;
-    __pyx_L8_exception_handled:;
+    __pyx_L9_exception_handled:;
     __Pyx_PyThreadState_assign
     __Pyx_XGIVEREF(__pyx_t_9);
     __Pyx_XGIVEREF(__pyx_t_10);
     __Pyx_XGIVEREF(__pyx_t_11);
     __Pyx_ExceptionReset(__pyx_t_9, __pyx_t_10, __pyx_t_11);
-    __pyx_L14_try_end:;
+    __pyx_L15_try_end:;
   }
 
   /* "spavro/fast_binary.pyx":252
@@ -7594,7 +7601,7 @@ static PyObject *__pyx_pf_6spavro_11fast_binary_34get_reader(CYTHON_UNUSED PyObj
  * 
  * def get_reader(schema):             # <<<<<<<<<<<<<<
  *     cdef unicode schema_type = get_type(schema)
- *     if schema_type in ('record', 'fixed'):
+ *     if schema_type in ('record', 'fixed', 'enum'):
  */
 
   /* function exit code */
@@ -25526,7 +25533,7 @@ static int __Pyx_InitCachedConstants(void) {
  * 
  * def get_reader(schema):             # <<<<<<<<<<<<<<
  *     cdef unicode schema_type = get_type(schema)
- *     if schema_type in ('record', 'fixed'):
+ *     if schema_type in ('record', 'fixed', 'enum'):
  */
   __pyx_tuple__116 = PyTuple_Pack(7, __pyx_n_s_schema, __pyx_n_s_schema_type, __pyx_n_s_placeholder, __pyx_n_s_namespace, __pyx_n_s_record_name, __pyx_n_s_namspace_record_name, __pyx_n_s_reader); if (unlikely(!__pyx_tuple__116)) __PYX_ERR(0, 229, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__116);
@@ -27109,7 +27116,7 @@ PyMODINIT_FUNC PyInit_fast_binary(void)
  * 
  * def get_reader(schema):             # <<<<<<<<<<<<<<
  *     cdef unicode schema_type = get_type(schema)
- *     if schema_type in ('record', 'fixed'):
+ *     if schema_type in ('record', 'fixed', 'enum'):
  */
   __pyx_t_2 = PyCFunction_NewEx(&__pyx_mdef_6spavro_11fast_binary_35get_reader, NULL, __pyx_n_s_spavro_fast_binary); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 229, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);

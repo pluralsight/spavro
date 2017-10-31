@@ -228,7 +228,7 @@ class ReaderPlaceholder(object):
 
 def get_reader(schema):
     cdef unicode schema_type = get_type(schema)
-    if schema_type in ('record', 'fixed'):
+    if schema_type in ('record', 'fixed', 'enum'):
         placeholder = ReaderPlaceholder()
         # using a placeholder because this is recursive and the reader isn't defined
         # yet and nested records might refer to this parent schema name
