@@ -7,25 +7,21 @@ a reader/writer call tree from the schema shape. All reads and writes then
 no longer consult the schema saving lookups.'''
 
 cdef long read_long(fo):
-    '''Read a long using zig-zag binary encoding'''
-    cdef:
-        unsigned long long accum
-        int temp_datum
-        char* c_raw
-        long long result
-        int shift = 7
-    raw = fo.read(1)
-    c_raw = raw
-    temp_datum = <int>c_raw[0]
-    accum = temp_datum & 0x7F
-    while (temp_datum & 0x80) != 0:
-        raw = fo.read(1)
-        c_raw = raw
-        temp_datum = <int>c_raw[0]
-        accum |= (temp_datum & 0x7F) << shift
+    """variable-length, zig-zag coding."""
+    c = fo.read(1)
+    if not c:
+        # end of input
+        return 0
+    b = ord(c)
+    n = b & 0x7F
+    shift = 7
+
+    while (b & 0x80) != 0:
+        b = ord(fo.read(1))
+        n |= (b & 0x7F) << shift
         shift += 7
-    result = (accum >> 1) ^ -(accum & 1)
-    return result
+
+    return (n >> 1) ^ -(n & 1)
 
 cdef bytes read_bytes(fo):
     '''Bytes are a marker for length of bytes and then binary data'''
@@ -230,7 +226,7 @@ class ReaderPlaceholder(object):
 
 def get_reader(schema):
     cdef unicode schema_type = get_type(schema)
-    if schema_type in ('record', 'fixed'):
+    if schema_type in ('record', 'fixed', 'enum'):
         placeholder = ReaderPlaceholder()
         # using a placeholder because this is recursive and the reader isn't defined
         # yet and nested records might refer to this parent schema name
@@ -249,6 +245,7 @@ def get_reader(schema):
     try:
         reader = reader_type_map[schema_type](schema)
     except KeyError:
+        print(schema_type)
         reader = schema_cache[schema_type]
 
     return reader
