@@ -285,7 +285,7 @@ cdef void write_bytes(outbuf, datum):
 
 
 # except *
-cdef void write_utf8(outbuf, char* datum):
+cdef void write_utf8(outbuf, datum):
     """
     Bytes are encoded as a long followed by that many bytes of data.
     """
@@ -611,7 +611,11 @@ def make_long_writer(schema):
 
 
 def make_string_writer(schema):
-    return write_utf8
+    def checked_string_writer(outbuf, datum):
+        if not isinstance(datum, six.string_types):
+            raise TypeError("Non string value")
+        write_utf8(outbuf, datum)
+    return checked_string_writer
 
 
 def make_byte_writer(schema):
