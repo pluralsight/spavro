@@ -25,7 +25,7 @@ if USE_CYTHON:
 
 setup(
   name='spavro',
-  version='1.1.1',
+  version='1.1.2',
   packages=['spavro'],
   package_dir={'': 'src'},
   # scripts=["./scripts/avro"],

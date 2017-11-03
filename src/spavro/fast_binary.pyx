@@ -1,10 +1,15 @@
 # Copyright (C) 2017 Pluralsight LLC
-
 '''Fast Cython extension for reading / writing and validating AVRO records.
 
 The main edge this code has is that it parses the schema only once and creates
 a reader/writer call tree from the schema shape. All reads and writes then
 no longer consult the schema saving lookups.'''
+
+import six
+INT_MIN_VALUE = -(1 << 31)
+INT_MAX_VALUE = (1 << 31) - 1
+LONG_MIN_VALUE = -(1 << 63)
+LONG_MAX_VALUE = (1 << 63) - 1
 
 cdef long long read_long(fo):
     '''Read a long using zig-zag binary encoding'''
@@ -279,7 +284,8 @@ cdef void write_bytes(outbuf, datum):
     outbuf.write(datum)
 
 
-cdef void write_utf8(outbuf, datum):
+# except *
+cdef void write_utf8(outbuf, char* datum):
     """
     Bytes are encoded as a long followed by that many bytes of data.
     """
@@ -309,10 +315,11 @@ cdef void write_null(outbuf, datum):
 
 
 cdef void write_fixed(outbuf, datum):
+    """A fixed writer writes out exactly the bytes up to a count"""
     outbuf.write(datum)
 
 
-def write_boolean(outbuf, char datum):
+cdef write_boolean(outbuf, char datum):
     """A boolean is written as a single byte whose value is either 0 (false) or
     1 (true)."""
     cdef char x = 1 if datum else 0
@@ -560,25 +567,64 @@ def make_map_writer(schema):
 
 
 def make_boolean_writer(schema):
-    return write_boolean
+    '''Create a boolean writer, adds a validation step before the actual
+    write function'''
+    def checked_boolean_writer(outbuf, datum):
+        if not isinstance(datum, bool):
+            raise TypeError("Not a boolean value")
+        write_boolean(outbuf, datum)
+    return checked_boolean_writer
+
 
 def make_fixed_writer(schema):
-    return write_fixed
+    '''A writer that must write X bytes defined by the schema'''
+    cdef long size = schema['size']
+    # note: not a char* because those are null terminated and fixed
+    # has no such limitation
+    def checked_write_fixed(outbuf, datum):
+        if len(datum) != size:
+            raise TypeError("Size Mismatch for Fixed data")
+        write_fixed(outbuf, datum)
+    return checked_write_fixed
+
+
+def make_int_writer(schema):
+    '''Create a int writer, adds a validation step before the actual
+    write function to make sure the int value doesn't overflow'''
+    def checked_int_write(outbuf, datum):
+        if not (isinstance(datum, six.integer_types)
+                        and INT_MIN_VALUE <= datum <= INT_MAX_VALUE):
+            raise TypeError("Non integer value or overflow")
+        write_long(outbuf, datum)
+    return checked_int_write
+
 
 def make_long_writer(schema):
-    return write_long
+    '''Create a long writer, adds a validation step before the actual
+    write function to make sure the long value doesn't overflow'''
+    def checked_long_write(outbuf, datum):
+        if not (isinstance(datum, six.integer_types)
+                        and LONG_MIN_VALUE <= datum <= LONG_MAX_VALUE):
+            raise TypeError("Non integer value or overflow")
+        write_long(outbuf, datum)
+    return checked_long_write
+
 
 def make_string_writer(schema):
     return write_utf8
 
+
 def make_byte_writer(schema):
     return write_bytes
+
 
 def make_float_writer(schema):
     return write_float
 
+
 def make_double_writer(schema):
     return write_double
+
 
 def make_null_writer(schema):
     return write_null
@@ -595,7 +641,7 @@ writer_type_map = {
     'float': make_float_writer,
     'long': make_long_writer,
     'bytes': make_byte_writer,
-    'int': make_long_writer,
+    'int': make_int_writer,
     'fixed': make_fixed_writer,
     'enum': make_enum_writer,
     'array': make_array_writer,
