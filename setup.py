@@ -25,11 +25,10 @@ if USE_CYTHON:
 
 setup(
   name='spavro',
-  version='1.1.2+patch1',
+  version='1.1.2+patch2',
   packages=['spavro'],
   package_dir={'': 'src'},
   # scripts=["./scripts/avro"],
-  include_package_data=True,
   # Project uses simplejson, so ensure that it gets installed or upgraded
   # on the target machine
   install_requires=install_requires,
