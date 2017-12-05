@@ -1,6 +1,11 @@
 Spavro Changelog
 -----------------
 
+1.1.3 - Dec 4, 2017
+===================
+
+- Fix source distribution Cython file inclusion (pull request)
+
 1.1.2 - Nov 14, 2017
 ====================
 
