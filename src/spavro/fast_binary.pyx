@@ -532,7 +532,10 @@ def make_record_writer(schema):
 
     def write_record(outbuf, datum):
         for field in fields:
-            field.writer(outbuf, datum.get(field.name))
+            try:
+                field.writer(outbuf, datum.get(field.name))
+            except TypeError as e:
+                raise TypeError("Error writing record schema at fieldname: '{}', datum: '{}'".format(field.name, repr(datum.get(field.name))))
     write_record.__reduce__ = lambda: (make_record_writer, (schema,))
     return write_record
 
@@ -571,7 +574,7 @@ def make_boolean_writer(schema):
     write function'''
     def checked_boolean_writer(outbuf, datum):
         if not isinstance(datum, bool):
-            raise TypeError("Not a boolean value")
+            raise TypeError("{} - Not a boolean value. Schema: {}".format(repr(datum), schema))
         write_boolean(outbuf, datum)
     return checked_boolean_writer
 
@@ -583,7 +586,7 @@ def make_fixed_writer(schema):
     # has no such limitation
     def checked_write_fixed(outbuf, datum):
         if len(datum) != size:
-            raise TypeError("Size Mismatch for Fixed data")
+            raise TypeError("{} - Size Mismatch ({}) for Fixed data. Schema: {}".format(repr(datum), len(datum), schema))
         write_fixed(outbuf, datum)
     return checked_write_fixed
 
@@ -594,7 +597,7 @@ def make_int_writer(schema):
     def checked_int_write(outbuf, datum):
         if not (isinstance(datum, six.integer_types)
                         and INT_MIN_VALUE <= datum <= INT_MAX_VALUE):
-            raise TypeError("Non integer value or overflow")
+            raise TypeError("{} - Non integer value or overflow. Schema: {}".format(datum, schema))
         write_long(outbuf, datum)
     return checked_int_write
 
@@ -605,7 +608,7 @@ def make_long_writer(schema):
     def checked_long_write(outbuf, datum):
         if not (isinstance(datum, six.integer_types)
                         and LONG_MIN_VALUE <= datum <= LONG_MAX_VALUE):
-            raise TypeError("Non integer value or overflow")
+            raise TypeError("{} - Non integer value or overflow. Schema: {}".format(repr(datum), schema))
         write_long(outbuf, datum)
     return checked_long_write
 
@@ -613,7 +616,7 @@ def make_long_writer(schema):
 def make_string_writer(schema):
     def checked_string_writer(outbuf, datum):
         if not isinstance(datum, six.string_types):
-            raise TypeError("Non string value")
+            raise TypeError("{} - is not a string value. Schema: {}".format(repr(datum), schema))
         write_utf8(outbuf, datum)
     return checked_string_writer
 

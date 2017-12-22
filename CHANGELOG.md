@@ -1,10 +1,16 @@
 Spavro Changelog
 -----------------
 
+1.1.4 - Dec 22, 2017
+===================
+
+- Add more helpful exception messages (mainly for Python 3 with chained exceptions) that will describe which field in a record datum failed and when ints and strings mismatch, show the datum and the schema.
+- Fix some old non-py3 incompatible utility code to be py2/py3
+
 1.1.3 - Dec 4, 2017
 ===================
 
-- Fix source distribution Cython file inclusion (pull request)
+- Fix source distribution Cython file inclusion ([pull request](https://github.com/pluralsight/spavro/pull/2))
 
 1.1.2 - Nov 14, 2017
 ====================
