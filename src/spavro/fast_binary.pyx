@@ -97,7 +97,10 @@ def make_union_reader(union_schema):
     def union_reader(fo):
         '''Read the long index for which schema to process, then use that'''
         union_index = read_long(fo)
-        return readers[union_index](fo)
+        try:
+            return readers[union_index](fo)
+        except IndexError:
+            raise TypeError('Unable to process union schema, mismatch?')
     union_reader.__reduce__ = lambda: (make_union_reader, (union_schema,))
     return union_reader
 
@@ -475,7 +478,10 @@ def make_union_writer(union_schema):
         # or a float and a double in a union (which is valid but nonsensical
         # in python but valid in avro)
         def simple_writer_lookup(datum):
-            return writer_lookup_dict[type(datum)]
+            try:
+                return writer_lookup_dict[type(datum)]
+            except KeyError:
+                raise TypeError("{} - Invalid type in union. Schema: {}".format(repr(datum), schema))
 
         writer_lookup = simple_writer_lookup
     else:
@@ -496,7 +502,10 @@ def make_union_writer(union_schema):
             cdef:
                 long idx
                 list lookup_result
-            lookup_result = writer_lookup_dict[type(datum)]
+            try:
+                lookup_result = writer_lookup_dict[type(datum)]
+            except KeyError:
+                raise TypeError("{} - Invalid datum for type in union. Schema: {}".format(repr(datum), schema))
             if len(lookup_result) == 1:
                 idx, get_check, writer = lookup_result[0]
             else:
@@ -504,7 +513,7 @@ def make_union_writer(union_schema):
                     if get_check(datum):
                         break
                 else:
-                    raise TypeError("No matching schema for datum: {}".format(datum))
+                    raise TypeError("No matching schema for datum: {}".format(repr(datum)))
             return idx, writer
 
         writer_lookup = complex_writer_lookup
