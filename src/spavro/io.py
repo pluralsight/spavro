@@ -140,7 +140,6 @@ def validate(expected_schema, datum):
 # Decoder/Encoder
 #
 import logging
-logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
 use_fast = False
 try:
