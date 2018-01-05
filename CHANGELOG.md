@@ -1,6 +1,11 @@
 Spavro Changelog
 -----------------
 
+1.1.5 - Jan 4, 2018
+===================
+
+- Remove accidental debug loglevel logging directive
+
 1.1.4 - Dec 22, 2017
 ===================
 
