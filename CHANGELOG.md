@@ -1,6 +1,11 @@
 Spavro Changelog
 -----------------
 
+1.1.6 - Jan 17, 2018
+===================
+
+- Fix bug with reference types (named references) inside unions
+
 1.1.5 - Jan 4, 2018
 ===================
 

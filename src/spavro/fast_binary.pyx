@@ -287,10 +287,9 @@ cdef void write_bytes(outbuf, datum):
     outbuf.write(datum)
 
 
-# except *
 cdef void write_utf8(outbuf, datum):
     """
-    Bytes are encoded as a long followed by that many bytes of data.
+    Unicode are encoded as write_bytes of the utf-8 encoded data.
     """
     write_bytes(outbuf, datum.encode("utf-8"))
 
@@ -344,17 +343,6 @@ avro_to_py = {
     u"map": dict
 }
 
-py_to_avro = {
-    unicode: u'string',
-    str: u'string',
-    int: u'int',
-    long: u'long',
-    bool: u'boolean',
-    type(None): u'null',
-    float: u'double',
-    list: u'array',
-    dict: u'record'
-}
 
 # ===============================
 CheckField = namedtuple('CheckField', ['name', 'check'])
@@ -392,9 +380,6 @@ def make_long_check(schema):
 
 def make_boolean_check(schema):
     return lambda datum: isinstance(datum, bool)
-
-# def make_boolean_check(schema):
-#     return lambda datum: isinstance(datum, boolean)
 
 def make_float_check(schema):
     return lambda datum: isinstance(datum, int) or isinstance(datum, long) or isinstance(datum, float)
@@ -448,8 +433,17 @@ check_type_map = {
 
 # ====================
 
+def lookup_schema(schema):
+    '''Check if a schema is a standard type, if not, lookup in the custom
+    schema dictionary and replace the custom name with the expanded original
+    schema.'''
+    check_type = get_type(schema)
+    if check_type in writer_type_map:
+        return schema
+    return custom_schema[check_type]
+
 def make_union_writer(union_schema):
-    cdef list type_list = [get_type(schema) for schema in union_schema]
+    cdef list type_list = [get_type(lookup_schema(schema)) for schema in union_schema]
     # cdef dict writer_lookup
     # cdef list record_list
     cdef dict writer_lookup_dict
@@ -469,7 +463,7 @@ def make_union_writer(union_schema):
                       len(set(type_list) & set(['record', 'map'])) > 1)
 
     if simple_union:
-        writer_lookup_dict = {avro_to_py[get_type(schema)]: (idx, get_writer(schema)) for idx, schema in enumerate(union_schema)}
+        writer_lookup_dict = {avro_to_py[get_type(lookup_schema(schema))]: (idx, get_writer(schema)) for idx, schema in enumerate(union_schema)}
         if int in writer_lookup_dict:
             writer_lookup_dict[long] = writer_lookup_dict[int]
         if unicode in writer_lookup_dict:
@@ -487,7 +481,7 @@ def make_union_writer(union_schema):
     else:
         writer_lookup_dict = {}
         for idx, schema in enumerate(union_schema):
-            python_type = avro_to_py[get_type(schema)]
+            python_type = avro_to_py[get_type(lookup_schema(schema))]
             if python_type in writer_lookup_dict:
                 writer_lookup_dict[python_type] = writer_lookup_dict[python_type] + [(idx, get_check(schema), get_writer(schema))]
             else:
@@ -664,6 +658,7 @@ writer_type_map = {
     'map': make_map_writer
 }
 
+custom_schema = {}
 
 class WriterPlaceholder(object):
     def __init__(self):
@@ -675,9 +670,10 @@ class WriterPlaceholder(object):
 
 def get_writer(schema):
     cdef unicode schema_type = get_type(schema)
+
     if schema_type in ('record', 'fixed', 'enum'):
         placeholder = WriterPlaceholder()
-        # using a placeholder because this is recursive and the reader isn't defined
+        # using a placeholder because this is recursive and the writer isn't defined
         # yet and nested records might refer to this parent schema name
         namespace = schema.get('namespace')
         name = schema.get('name')
@@ -685,15 +681,18 @@ def get_writer(schema):
            fullname = '.'.join([namespace, name])
         else:
             fullname = name
+        custom_schema[fullname] = schema
         schema_cache[fullname] = placeholder
         writer = writer_type_map[schema_type](schema)
-        # now that we've returned, assign the reader to the placeholder
+        # now that we've returned, assign the writer to the placeholder
         # so that the execution will work
         placeholder.writer = writer
         return writer
     try:
         writer = writer_type_map[schema_type](schema)
     except KeyError:
+        # lookup the schema by unique previously defined name,
+        # i.e. a custom type
         writer = schema_cache[schema_type]
 
     return writer
