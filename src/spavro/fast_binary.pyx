@@ -100,7 +100,7 @@ def make_union_reader(union_schema):
         try:
             return readers[union_index](fo)
         except IndexError:
-            raise TypeError('Unable to process union schema, mismatch?')
+            raise TypeError("Unable to process union schema {}, union index '{}' doesn't exist. This is most likely because the read schema being used is not compatible with the write schema used to write the data.".format(repr(union_schema), union_index))
     union_reader.__reduce__ = lambda: (make_union_reader, (union_schema,))
     return union_reader
 
