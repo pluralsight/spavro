@@ -658,15 +658,16 @@ class SlowDatumWriter(object):
         The value is then encoded per the indicated schema within the union.
         """
         # resolve union
-        index_of_schema = -1
-        for i, candidate_schema in enumerate(writers_schema.schemas):
+        for schema_index, candidate_schema in enumerate(writers_schema.schemas):
             if validate(candidate_schema, datum):
-                index_of_schema = i
-        if index_of_schema < 0: raise AvroTypeException(writers_schema, datum)
+                break
+        else:
+            # nothing matched
+            raise AvroTypeException(writers_schema, datum)
 
         # write data
-        encoder.write_long(index_of_schema)
-        self.write_data(writers_schema.schemas[index_of_schema], datum, encoder)
+        encoder.write_long(schema_index)
+        self.write_data(candidate_schema, datum, encoder)
 
     def write_record(self, writers_schema, datum, encoder):
         """

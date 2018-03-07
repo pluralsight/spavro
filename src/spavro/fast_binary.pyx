@@ -339,7 +339,8 @@ avro_to_py = {
     u"array": list,
     u"record": dict,
     u"enum": unicode,
-    u"fixed": str,
+    u"fixed": bytes,
+    u"bytes": bytes,
     u"map": dict
 }
 
@@ -459,7 +460,7 @@ def make_union_writer(union_schema):
     # enums, strings and fixed are all python data type unicode or string
     # so those won't work either when mixed
     simple_union = not(type_list.count('record') > 1 or
-                      len(set(type_list) & set(['string', 'enum', 'fixed'])) > 1 or
+                      len(set(type_list) & set(['string', 'enum', 'fixed', 'bytes'])) > 1 or
                       len(set(type_list) & set(['record', 'map'])) > 1)
 
     if simple_union:
@@ -482,6 +483,8 @@ def make_union_writer(union_schema):
         writer_lookup_dict = {}
         for idx, schema in enumerate(union_schema):
             python_type = avro_to_py[get_type(lookup_schema(schema))]
+            # TODO: if fixed and bytes are in the schema then we should check fixed before bytes
+            # I think, since that's more efficient space wise?
             if python_type in writer_lookup_dict:
                 writer_lookup_dict[python_type] = writer_lookup_dict[python_type] + [(idx, get_check(schema), get_writer(schema))]
             else:
