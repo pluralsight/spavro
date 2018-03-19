@@ -11,7 +11,8 @@ INT_MAX_VALUE = (1 << 31) - 1
 LONG_MIN_VALUE = -(1 << 63)
 LONG_MAX_VALUE = (1 << 63) - 1
 
-cdef long long read(fo):
+
+cdef long long read_long(fo):
     '''Read a long using zig-zag binary encoding'''
     cdef:
         unsigned long long accum
@@ -27,6 +28,7 @@ cdef long long read(fo):
     # bit shift right 1 bit, then xor with the lsb * -1 (which would flip all
     # the bits if it is '1' reversing the 2's compliment)
     return (accum >> 1) ^ -(accum & 1)
+
 
 cdef bytes read_bytes(fo):
     '''Bytes are a marker for length of bytes and then binary data'''
