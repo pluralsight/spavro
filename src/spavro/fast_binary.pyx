@@ -17,11 +17,18 @@ cdef long long read_long(fo):
     cdef:
         unsigned long long accum
         unsigned long long temp_datum
+        char* c_raw
         int shift = 7
-    temp_datum = fo.read(1)[0]
+    # this ping-pong casting is required for Python 2.7
+    # not sure why exactly
+    raw = fo.read(1)
+    c_raw = raw
+    temp_datum = c_raw[0]
     accum = temp_datum & 0x7F
     while (temp_datum & 0x80) != 0:
-        temp_datum = fo.read(1)[0]
+        raw = fo.read(1)
+        c_raw = raw
+        temp_datum = c_raw[0]
         accum |= (temp_datum & 0x7F) << shift
         shift += 7
     # to convert from the zig zag value back to regular int
