@@ -11,23 +11,21 @@ INT_MAX_VALUE = (1 << 31) - 1
 LONG_MIN_VALUE = -(1 << 63)
 LONG_MAX_VALUE = (1 << 63) - 1
 
-cdef long long read_long(fo):
+cdef long long read(fo):
     '''Read a long using zig-zag binary encoding'''
     cdef:
         unsigned long long accum
-        int temp_datum
-        char* c_raw
+        unsigned long long temp_datum
         int shift = 7
-    raw = fo.read(1)
-    c_raw = raw
-    temp_datum = <int>c_raw[0]
+    temp_datum = fo.read(1)[0]
     accum = temp_datum & 0x7F
     while (temp_datum & 0x80) != 0:
-        raw = fo.read(1)
-        c_raw = raw
-        temp_datum = <int>c_raw[0]
+        temp_datum = fo.read(1)[0]
         accum |= (temp_datum & 0x7F) << shift
         shift += 7
+    # to convert from the zig zag value back to regular int
+    # bit shift right 1 bit, then xor with the lsb * -1 (which would flip all
+    # the bits if it is '1' reversing the 2's compliment)
     return (accum >> 1) ^ -(accum & 1)
 
 cdef bytes read_bytes(fo):

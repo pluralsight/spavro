@@ -1,6 +1,11 @@
 Spavro Changelog
 -----------------
 
+1.1.8 - Mar 19, 2018
+===================
+
+- Fix bug with C implementation of zig zag decoder. Additional unnecessary cast was clipping during the bit shifting for larger numbers.
+
 1.1.7 - Mar 6, 2018
 ===================
 
