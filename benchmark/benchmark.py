@@ -4,6 +4,7 @@
 import json
 import sys
 import random
+from collections import defaultdict
 import avro.schema
 import avro.io
 import spavro.schema
@@ -84,54 +85,66 @@ def make_fastavro_writer(schema, output):
     return write_func
 
 
-def test_serializer(name, write, test_array):
+def time_serdes(name, test_func, test_array):
     start_time = timer()
     record_count = len(test_array)
     for idx, record in enumerate(test_array):
-        write(record)
+        test_func(record)
     total_time = timer() - start_time
-    print("{}: {:.2f} records/sec".format(name, record_count / total_time))
+    return record_count, total_time
 
 
-def test_deserializer(name, read, test_array):
-    start_time = timer()
-    record_count = len(test_array)
-    for idx, record in enumerate(test_array):
-        read(record)
-    total_time = timer() - start_time
-    print("{}: {:.2f} records/sec".format(name, record_count / total_time))
-
-
-def test_serializers(iterations=1, record_count=1000):
-    random.seed("ALWAYSTHESAME")
+def create_write_records(field_count, record_count):
     print("Generating sample records to serialize")
     # schema, test_array_generator = generate_sample_records(record_count)
-    schema, test_array_generator = generate_random_records(30, record_count)
+    schema, test_array_generator = generate_random_records(field_count, record_count)
     test_array = list(test_array_generator)
-    print("Let the games begin!")
-    for i in range(iterations):
-        print("Run #{}".format(i+1))
-        for name, writer in [("Avro write", make_avro_writer(schema, io.BytesIO())),
-                             ("Fastavro write", make_fastavro_writer(schema, io.BytesIO())),
-                             ("Spavro write", make_spavro_writer(schema, io.BytesIO()))]:
-            test_serializer(name, writer, test_array)
-        print("-"*40)
+    return schema, test_array
 
 
-def test_deserializers(iterations=1, record_count=1000):
-    random.seed("ALWAYSTHESAME")
+def create_read_records(field_count, record_count):
     print("Generating sample avro to deserialize")
     # schema, test_array_generator = generate_sample_records(record_count)
-    schema, test_array_generator = generate_random_records(30, record_count)
+    schema, test_array_generator = generate_random_records(field_count, record_count)
     test_array = create_avro(schema, test_array_generator)
-    print("Let the games begin!")
-    for i in range(iterations):
-        print("Run #{}".format(i+1))
-        for name, reader in [("Avro read", make_avro_reader(schema)),
-                             ("Fastavro read", make_fastavro_reader(schema)),
-                             ("Spavro read", make_spavro_reader(schema))]:
-            test_serializer(name, reader, test_array)
-        print("-"*40)
+    return schema, test_array
 
-test_serializers(5, 50000)
-test_deserializers(5, 50000)
+
+def run_benchmarks(number_of_iterations=5):
+    random.seed("ALWAYSTHESAME")
+    results = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+    # field count, record count tuples
+    test_set = ((1, 5000000), (5, 1000000), (10, 500000), (50, 100000), (100, 50000), (500, 10000))
+
+    for field_count, record_count in test_set:
+        schema, test_data = create_read_records(field_count, record_count)
+        # read
+        read_functions = [("Avro", make_avro_reader(schema)),
+                          ("Fastavro", make_fastavro_reader(schema)),
+                          ("Spavro", make_spavro_reader(schema))]
+
+        for name, reader in read_functions:
+            for i in range(number_of_iterations):
+                print("Run #{}".format(i+1))
+                record_count, total_time = time_serdes(name, reader, test_data)
+                results["read"][(field_count, record_count)][name].append(total_time)
+                print("{}: {:.2f} records/sec".format(name, record_count / total_time))
+
+        schema, test_data = create_write_records(field_count, record_count)
+        # write
+        write_functions = [("Avro", make_avro_writer(schema, io.BytesIO())),
+                           ("Fastavro", make_fastavro_writer(schema, io.BytesIO())),
+                           ("Spavro", make_spavro_writer(schema, io.BytesIO()))]
+        for name, writer in write_functions:
+            for i in range(number_of_iterations):
+                print("Run #{}".format(i+1))
+                record_count, total_time = time_serdes(name, writer, test_data)
+                results["write"][(field_count, record_count)][name].append(total_time)
+                print("{}: {:.2f} records/sec".format(name, record_count / total_time))
+    return results
+
+
+if __name__ == "__main__":
+    benchmark_results = run_benchmarks()
+    with open("benchmark_results.json", "w") as bmark_file:
+        bmark_file.write(json.dumps(benchmark_results))
