@@ -1,3 +1,5 @@
+# Copyright (C) 2018 Pluralsight LLC
+
 import unittest
 from six import BytesIO
 
