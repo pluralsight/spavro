@@ -49,12 +49,13 @@ cdef read_null(fo):
     return None
 
 
-def read_boolean(fo):
+cdef bint read_boolean(fo):
     """
     a boolean is written as a single byte 
     whose value is either 0 (false) or 1 (true).
     """
     return fo.read(1) == b'\x01'
+
 
 cdef float read_float(fo):
     """
@@ -65,6 +66,7 @@ cdef float read_float(fo):
     data = fo.read(4)
     cdef char* y = data
     return (<float*>y)[0]
+
 
 cdef double read_double(fo):
     """
@@ -103,7 +105,7 @@ def make_union_reader(union_schema):
 
     def union_reader(fo):
         '''Read the long index for which schema to process, then use that'''
-        union_index = read_long(fo)
+        cdef long long union_index = read_long(fo)
         try:
             return readers[union_index](fo)
         except IndexError:
@@ -248,12 +250,12 @@ def get_reader(schema):
         # using a placeholder because this is recursive and the reader isn't defined
         # yet and nested records might refer to this parent schema name
         namespace = schema.get('namespace')
-        record_name = schema.get('name')
-        if namespace:
-           namspace_record_name = '.'.join([namespace, record_name])
+        name = schema.get('name')
+        if namespace and "." not in name:
+           fullname = '.'.join([namespace, name])
         else:
-            namspace_record_name = record_name
-        schema_cache[namspace_record_name] = placeholder
+            fullname = name
+        schema_cache[fullname] = placeholder
         reader = reader_type_map[schema_type](schema)
         # now that we've returned, assign the reader to the placeholder
         # so that the execution will work
@@ -356,6 +358,7 @@ avro_to_py = {
 CheckField = namedtuple('CheckField', ['name', 'check'])
 
 def get_check(schema):
+    schema = lookup_schema(schema)
     cdef unicode schema_type = get_type(schema)
     return check_type_map[schema_type](schema)
 
@@ -401,7 +404,7 @@ def make_byte_check(schema):
 def make_array_check(schema):
     item_check = get_check(schema['items'])
     def array_check(datum):
-        return all([item_check(item) for item in datum])
+        return isinstance(datum, list) and all([item_check(item) for item in datum])
     return array_check
 
 def make_union_check(union_schema):
@@ -687,8 +690,8 @@ def get_writer(schema):
         # yet and nested records might refer to this parent schema name
         namespace = schema.get('namespace')
         name = schema.get('name')
-        if namespace:
-           fullname = '.'.join([namespace, name])
+        if namespace and "." not in name:
+            fullname = '.'.join([namespace, name])
         else:
             fullname = name
         custom_schema[fullname] = schema
@@ -706,9 +709,6 @@ def get_writer(schema):
         writer = schema_cache[schema_type]
 
     return writer
-
-
-
 
 
 import struct
