@@ -1,8 +1,16 @@
 Spavro Changelog
 -----------------
 
+1.1.11 - Apr 30, 2018
+=====================
+
+- Fix bug with namespace handling where names with 'dots' in them were still
+being concatenated with the namespace leading to bogus names
+- The array data 'check' function also had a bug where it was not verifying that
+the datum was a list before attempting to check that all items conformed to the schema
+
 1.1.8, 1.1.9, 1.1.10 - Mar 19, 2018
-============================
+===================================
 
 - Fix bug with C implementation of zig zag decoder. Additional unnecessary cast was clipping during the bit shifting for larger numbers.
 - Skipping 1.1.8 and 1.1.9 was missing C cythonized code and created incompatibilities with python 2.7
