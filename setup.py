@@ -23,9 +23,15 @@ extensions = [Extension("spavro.fast_binary", sources=["src/spavro/fast_binary" 
 if USE_CYTHON:
     extensions = cythonize(extensions)
 
+try:
+    with open("README.md", "r") as readmefile:
+        readme_data = readmefile.read()
+except IOError:
+    readme_data = ''
+
 setup(
   name='spavro',
-  version='1.1.11',
+  version='1.1.12',
   packages=['spavro'],
   package_dir={'': 'src'},
   # scripts=["./scripts/avro"],
@@ -35,6 +41,8 @@ setup(
   # spavro C extensions
   ext_modules=extensions,
   # metadata for upload to PyPI
+  long_description_content_type='text/markdown',
+  long_description=readme_data,
   author='Michael Kowalchik',
   author_email='mikepk@pluralsight.com',
   description='Spavro is a (sp)eedier avro library -- Spavro is a fork of the official Apache AVRO python 2 implementation with the goal of greatly improving data read deserialization and write serialization performance.',

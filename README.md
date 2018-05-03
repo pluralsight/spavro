@@ -26,24 +26,24 @@ The TLDR is that spavro has *14-23x* the throughput of the default Apache avro i
 
 Records per second read:
 
-![Read, 1 field, records per sec](/benchmark/results/read_1field_rec_per_sec.png?raw=true "Read, 1 field, records per sec")
+![Read, 1 field, records per sec](https://github.com/pluralsight/spavro/raw/master/benchmark/results/read_1field_rec_per_sec.png?raw=true "Read, 1 field, records per sec")
 ![Read, 500 fields, records per sec](/benchmark/results/read_500field_rec_per_sec.png?raw=true "Read, 500 fields, records per sec")
 
 Datums per second (individual fields) read:
 
-![Read, fields per second](/benchmark/results/read_datum_per_sec.png?raw=true "Read, fields per second")
+![Read, fields per second](https://github.com/pluralsight/spavro/raw/master/benchmark/results/read_datum_per_sec.png?raw=true "Read, fields per second")
 
 ### Serialize avro records (write)
 
 
 Records per second write:
 
-![Write, 1 field, records per sec](/benchmark/results/write_1field_rec_per_sec.png?raw=true "Write, 1 field, records per sec")
+![Write, 1 field, records per sec](https://github.com/pluralsight/spavro/raw/master/benchmark/results/write_1field_rec_per_sec.png?raw=true "Write, 1 field, records per sec")
 ![Write, 500 fields, records per sec](/benchmark/results/write_500field_rec_per_sec.png?raw=true "Write, 500 fields, records per sec")
 
 Datums per second (individual fields) write:
 
-![Write, fields per second](/benchmark/results/write_datum_per_sec.png?raw=true "Write, fields per second")
+![Write, fields per second](https://github.com/pluralsight/spavro/raw/master/benchmark/results/write_datum_per_sec.png?raw=true "Write, fields per second")
 
 
 ### Methodology
