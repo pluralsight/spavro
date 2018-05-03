@@ -1,7 +1,7 @@
 Spavro Changelog
 -----------------
 
-1.1.12, 1.1.13, 1.1.14 - May 3, 2018
+1.1.12, 1.1.13, 1.1.14, 1.1.15 - May 3, 2018
 
 - Pypi requires a full version to update the description, attempting to add the
 markdown version of the description to pypi
