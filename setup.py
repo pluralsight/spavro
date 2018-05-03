@@ -31,7 +31,7 @@ except IOError:
 
 setup(
   name='spavro',
-  version='1.1.13',
+  version='1.1.14',
   packages=['spavro'],
   package_dir={'': 'src'},
   # scripts=["./scripts/avro"],
@@ -45,7 +45,7 @@ setup(
   long_description=readme_data,
   author='Michael Kowalchik',
   author_email='mikepk@pluralsight.com',
-  description='Spavro is a (sp)eedier avro library -- Spavro is a fork of the official Apache AVRO python 2 implementation with the goal of greatly improving data read deserialization and write serialization performance.',
+  description='An Avro library, Spavro is a (sp)eedier avro implementation using Cython -- Spavro is a fork of the official Apache AVRO python 2 implementation with the goal of greatly improving data read deserialization and write serialization performance.',
   license='Apache License 2.0',
   keywords='avro serialization rpc data',
   url='http://github.com/pluralsight/spavro',
