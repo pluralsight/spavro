@@ -134,6 +134,9 @@ def resolve(writer, reader):
             return resolve_record(writer, reader)
         if reader_type == "fixed":
             return resolve_fixed(writer, reader)
+        # for named types or other types that don't match
+        # just return the reader
+        return reader
     else:
         # see if we've 'upgraded' to a union
         if reader_type == 'union':

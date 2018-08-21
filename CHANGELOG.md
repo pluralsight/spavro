@@ -1,6 +1,16 @@
 Spavro Changelog
 -----------------
 
+1.1.18 - Aug 20, 2018
+=====================
+
+- Fixed bug with the schema resolver where named schemas were not being handled properly
+
+1.1.17 - May 4, 2018
+=====================
+
+- Version bump to try and fix the docs again
+
 1.1.16 - May 4, 2018
 =====================
 
