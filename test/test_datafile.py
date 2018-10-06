@@ -110,7 +110,7 @@ class TestDataFile(unittest.TestCase):
                 print('Correct Round Trip: %s' % is_correct)
                 print('')
         os.remove(FILENAME)
-        self.assertEquals(correct, len(CODECS_TO_VALIDATE) * len(SCHEMAS_TO_VALIDATE))
+        self.assertEqual(correct, len(CODECS_TO_VALIDATE) * len(SCHEMAS_TO_VALIDATE))
 
     def test_append(self):
         print('')
@@ -159,7 +159,7 @@ class TestDataFile(unittest.TestCase):
                 print('Correct Appended: %s' % is_correct)
                 print('')
         os.remove(FILENAME)
-        self.assertEquals(correct, len(CODECS_TO_VALIDATE)*len(SCHEMAS_TO_VALIDATE))
+        self.assertEqual(correct, len(CODECS_TO_VALIDATE)*len(SCHEMAS_TO_VALIDATE))
 
     def test_context_manager(self):
         # Context manager was introduced as a first class
@@ -203,11 +203,19 @@ class TestDataFile(unittest.TestCase):
         reader = open(FILENAME, 'rb')
         datum_reader = io.DatumReader()
         with datafile.DataFileReader(reader, datum_reader) as dfr:
-            self.assertEquals('foo', dfr.get_meta('test.string'))
-            self.assertEquals('1', dfr.get_meta('test.number'))
+            self.assertEqual('foo', dfr.get_meta('test.string'))
+            self.assertEqual('1', dfr.get_meta('test.number'))
             for datum in dfr:
                 datums.append(datum)
         self.assertTrue(reader.closed)
+
+    def test_writer_incorrect_mode_handling(self):
+        '''When an output file is passed to the DataFileWriter to append records and
+        it's not readable, throw an exception.'''
+        writer = open(FILENAME, 'wb')
+        with self.assertRaises(datafile.DataFileException) as context:
+            datafile.DataFileWriter(writer, io.DatumWriter())
+
 
 if __name__ == '__main__':
     unittest.main()

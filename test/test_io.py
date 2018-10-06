@@ -193,7 +193,7 @@ class TestIO(unittest.TestCase):
       validated = io.validate(schema.parse(example_schema), datum)
       print('Valid: %s' % validated)
       if validated: passed += 1
-    self.assertEquals(passed, len(SCHEMAS_TO_VALIDATE))
+    self.assertEqual(passed, len(SCHEMAS_TO_VALIDATE))
 
   def test_round_trip(self):
     print_name('TEST ROUND TRIP')
@@ -211,7 +211,7 @@ class TestIO(unittest.TestCase):
         correct += 1
       else:
         print("Mismatch: {} != {}".format(datum, round_trip_datum))
-    self.assertEquals(correct, len(SCHEMAS_TO_VALIDATE))
+    self.assertEqual(correct, len(SCHEMAS_TO_VALIDATE))
 
   #
   # BINARY ENCODING OF INT AND LONG
@@ -219,19 +219,19 @@ class TestIO(unittest.TestCase):
 
   def test_binary_int_encoding(self):
     correct = check_binary_encoding('int')
-    self.assertEquals(correct, len(BINARY_ENCODINGS))
+    self.assertEqual(correct, len(BINARY_ENCODINGS))
 
   def test_binary_long_encoding(self):
     correct = check_binary_encoding('long')
-    self.assertEquals(correct, len(BINARY_ENCODINGS))
+    self.assertEqual(correct, len(BINARY_ENCODINGS))
 
   def test_skip_int(self):
     correct = check_skip_number('int')
-    self.assertEquals(correct, len(BINARY_ENCODINGS))
+    self.assertEqual(correct, len(BINARY_ENCODINGS))
 
   def test_skip_long(self):
     correct = check_skip_number('long')
-    self.assertEquals(correct, len(BINARY_ENCODINGS))
+    self.assertEqual(correct, len(BINARY_ENCODINGS))
 
   #
   # SCHEMA RESOLUTION
@@ -253,7 +253,7 @@ class TestIO(unittest.TestCase):
         print('Writer: %s Reader: %s' % (writers_schema, readers_schema))
         print('Datum Read: %s' % datum_read)
         if datum_read != datum_to_write: incorrect += 1
-    self.assertEquals(incorrect, 0)
+    self.assertEqual(incorrect, 0)
 
   def test_unknown_symbol(self):
     print_name('TEST UNKNOWN SYMBOL')
@@ -290,7 +290,7 @@ class TestIO(unittest.TestCase):
       datum_read = read_datum(writer, writers_schema, readers_schema)
       print('Datum Read: %s' % datum_read)
       if datum_to_read == datum_read: correct += 1
-    self.assertEquals(correct, len(DEFAULT_VALUE_EXAMPLES))
+    self.assertEqual(correct, len(DEFAULT_VALUE_EXAMPLES))
 
   def test_no_default_value(self):
     print_name('TEST NO DEFAULT VALUE')
@@ -322,7 +322,7 @@ class TestIO(unittest.TestCase):
     writer, encoder, datum_writer = write_datum(datum_to_write, writers_schema)
     datum_read = read_datum(writer, writers_schema, readers_schema)
     print('Datum Read: %s' % datum_read)
-    self.assertEquals(datum_to_read, datum_read)
+    self.assertEqual(datum_to_read, datum_read)
 
   def test_field_order(self):
     print_name('TEST FIELD ORDER')
@@ -338,7 +338,7 @@ class TestIO(unittest.TestCase):
     writer, encoder, datum_writer = write_datum(datum_to_write, writers_schema)
     datum_read = read_datum(writer, writers_schema, readers_schema)
     print('Datum Read: %s' % datum_read)
-    self.assertEquals(datum_to_read, datum_read)
+    self.assertEqual(datum_to_read, datum_read)
 
   def test_type_exception(self):
     print_name('TEST TYPE EXCEPTION')
