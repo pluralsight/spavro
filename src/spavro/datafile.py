@@ -100,8 +100,12 @@ class DataFileWriter(object):
             self.set_meta('avro.schema', str(writers_schema))
             self.datum_writer.writers_schema = writers_schema
         else:
-            if not (writer.readable() and writer.writable()):
-                raise DataFileException("When appending records to an Avro data file, the file object passed into DataFileWriter must be opened in read/write mode, e.g. for files: \"rb+\" or \"ab+\"")
+            if writer.mode:
+                if writer.mode not in ('rb+', 'ab+'):
+                    raise DataFileException("When appending records to an Avro data file, the file object passed into DataFileWriter must be opened in read/write mode, e.g. for files: \"rb+\" or \"ab+\"")
+            else:
+                if not (writer.readable() and writer.writable()):
+                    raise DataFileException("When appending records to an Avro data file, the file object passed into DataFileWriter must be opened in read/write mode, e.g. for files: \"rb+\" or \"ab+\"")
             # open writer for reading to collect metadata
             dfr = DataFileReader(writer, io.DatumReader())
 
