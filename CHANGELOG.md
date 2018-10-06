@@ -1,6 +1,11 @@
 Spavro Changelog
 -----------------
 
+1.1.20 - Oct 6, 2018
+=====================
+
+- Add better handling for appending avro records when the file obejct isn't opened using the right mode.
+
 1.1.18, 1.1.19 - Aug 20, 2018
 =====================
 
