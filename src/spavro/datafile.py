@@ -81,8 +81,6 @@ class DataFileWriter(object):
 
         @param writer: File-like object to write into.
         """
-        if not writer.writable():
-            raise DataFileException("Output file object must be writeable")
         self._writer = writer
         self._encoder = io.BinaryEncoder(writer)
         self._datum_writer = datum_writer
