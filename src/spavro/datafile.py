@@ -81,6 +81,8 @@ class DataFileWriter(object):
 
         @param writer: File-like object to write into.
         """
+        if not writer.writable():
+            raise DataFileException("Output file object must be writeable")
         self._writer = writer
         self._encoder = io.BinaryEncoder(writer)
         self._datum_writer = datum_writer
@@ -98,9 +100,11 @@ class DataFileWriter(object):
             self.set_meta('avro.schema', str(writers_schema))
             self.datum_writer.writers_schema = writers_schema
         else:
+            if not (writer.readable() and writer.writable()):
+                raise DataFileException("When appending records to an Avro data file, the file object passed into DataFileWriter must be opened in read/write mode, e.g. for files: \"rb+\" or \"ab+\"")
             # open writer for reading to collect metadata
             dfr = DataFileReader(writer, io.DatumReader())
-            
+
             # TODO(hammer): collect arbitrary metadata
             # collect metadata
             self._sync_marker = dfr.sync_marker
