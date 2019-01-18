@@ -453,6 +453,27 @@ def lookup_schema(schema):
         return schema
     return custom_schema[check_type]
 
+
+cdef void create_promotions_for_union(dict writer_lookup_dict):
+    '''Take the writer lookup for a union and create some aliases and promotion
+    cases, and store those back into the writer lookup.'''
+    # handle promotion cases
+    # long and int are encoded the same way
+    if int in writer_lookup_dict:
+        writer_lookup_dict[long] = writer_lookup_dict[int]
+    # py2 and py3 both handle str/unicode differently
+    if unicode in writer_lookup_dict:
+        writer_lookup_dict[str] = writer_lookup_dict[unicode]
+    # allow the use of ints to 'find' float unions
+    if float in writer_lookup_dict and int not in writer_lookup_dict:
+        writer_lookup_dict[int] = writer_lookup_dict[float]
+    # allow strings to be used for byte data, if there's no string type
+    if bytes in writer_lookup_dict and str not in writer_lookup_dict:
+        writer_lookup_dict[str] = writer_lookup_dict[bytes][0], lambda output_buffer, val: writer_lookup_dict[bytes][1](output_buffer, val.encode('utf-8'))
+    if bytes in writer_lookup_dict and unicode not in writer_lookup_dict:
+        writer_lookup_dict[unicode] = writer_lookup_dict[bytes][0], lambda output_buffer, val: writer_lookup_dict[bytes][1](output_buffer, val.encode('utf-8'))
+
+
 def make_union_writer(union_schema):
     cdef list type_list = [get_type(lookup_schema(schema)) for schema in union_schema]
     # cdef dict writer_lookup
@@ -476,12 +497,7 @@ def make_union_writer(union_schema):
     if simple_union:
         writer_lookup_dict = {avro_to_py[get_type(lookup_schema(schema))]: (idx, get_writer(schema)) for idx, schema in enumerate(union_schema)}
 
-        if int in writer_lookup_dict:
-            writer_lookup_dict[long] = writer_lookup_dict[int]
-        if unicode in writer_lookup_dict:
-            writer_lookup_dict[str] = writer_lookup_dict[unicode]
-        if float in writer_lookup_dict and int not in writer_lookup_dict:
-            writer_lookup_dict[int] = writer_lookup_dict[float]
+        create_promotions_for_union(writer_lookup_dict)
 
         # warning, this will fail if there's both a long and int in a union
         # or a float and a double in a union (which is valid but nonsensical
@@ -490,7 +506,7 @@ def make_union_writer(union_schema):
             try:
                 return writer_lookup_dict[type(datum)]
             except KeyError:
-                raise TypeError("{} - Invalid type in union. Schema: {}".format(repr(datum), union_schema))
+                raise TypeError("{} - Invalid type ({}) in union. Schema: {}".format(repr(datum), type(datum), union_schema))
 
         writer_lookup = simple_writer_lookup
     else:
@@ -504,12 +520,16 @@ def make_union_writer(union_schema):
             else:
                 writer_lookup_dict[python_type] = [(idx, get_check(schema), get_writer(schema))]
 
-        if int in writer_lookup_dict:
-            writer_lookup_dict[long] = writer_lookup_dict[int]
-        if unicode in writer_lookup_dict:
-            writer_lookup_dict[str] = writer_lookup_dict[unicode]
-        if float in writer_lookup_dict and int not in writer_lookup_dict:
-            writer_lookup_dict[int] = writer_lookup_dict[float]
+        create_promotions_for_union(writer_lookup_dict)
+        # if int in writer_lookup_dict:
+        #     writer_lookup_dict[long] = writer_lookup_dict[int]
+        # if unicode in writer_lookup_dict:
+        #     writer_lookup_dict[str] = writer_lookup_dict[unicode]
+        # if float in writer_lookup_dict and int not in writer_lookup_dict:
+        #     writer_lookup_dict[int] = writer_lookup_dict[float]
+        # if bytes in writer_lookup_dict and str not in writer_lookup_dict:
+        #     writer_lookup_dict[str] = writer_lookup_dict[bytes]
+
 
         def complex_writer_lookup(datum):
             cdef:
@@ -518,7 +538,7 @@ def make_union_writer(union_schema):
             try:
                 lookup_result = writer_lookup_dict[type(datum)]
             except KeyError:
-                raise TypeError("{} - Invalid datum for type in union. Schema: {}".format(repr(datum), union_schema))
+                raise TypeError("{} - Invalid type ({}) in union. Schema: {}".format(repr(datum), type(datum), union_schema))
             if len(lookup_result) == 1:
                 idx, get_check, writer = lookup_result[0]
             else:
