@@ -31,7 +31,7 @@ except IOError:
 
 setup(
   name='spavro',
-  version='1.1.20',
+  version='1.1.21',
   packages=['spavro'],
   package_dir={'': 'src'},
   # scripts=["./scripts/avro"],

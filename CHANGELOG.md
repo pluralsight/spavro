@@ -1,6 +1,11 @@
 Spavro Changelog
 -----------------
 
+1.1.21 - Jan 19, 2019
+=====================
+
+- Add fix for case when int values are presented to a union containing a 'float' schema. Allow the int to be stored using the float schema.
+
 1.1.20 - Oct 6, 2018
 =====================
 
