@@ -475,10 +475,14 @@ def make_union_writer(union_schema):
 
     if simple_union:
         writer_lookup_dict = {avro_to_py[get_type(lookup_schema(schema))]: (idx, get_writer(schema)) for idx, schema in enumerate(union_schema)}
+
         if int in writer_lookup_dict:
             writer_lookup_dict[long] = writer_lookup_dict[int]
         if unicode in writer_lookup_dict:
             writer_lookup_dict[str] = writer_lookup_dict[unicode]
+        if float in writer_lookup_dict and int not in writer_lookup_dict:
+            writer_lookup_dict[int] = writer_lookup_dict[float]
+
         # warning, this will fail if there's both a long and int in a union
         # or a float and a double in a union (which is valid but nonsensical
         # in python but valid in avro)
@@ -486,7 +490,7 @@ def make_union_writer(union_schema):
             try:
                 return writer_lookup_dict[type(datum)]
             except KeyError:
-                raise TypeError("{} - Invalid type in union. Schema: {}".format(repr(datum), schema))
+                raise TypeError("{} - Invalid type in union. Schema: {}".format(repr(datum), union_schema))
 
         writer_lookup = simple_writer_lookup
     else:
@@ -504,6 +508,8 @@ def make_union_writer(union_schema):
             writer_lookup_dict[long] = writer_lookup_dict[int]
         if unicode in writer_lookup_dict:
             writer_lookup_dict[str] = writer_lookup_dict[unicode]
+        if float in writer_lookup_dict and int not in writer_lookup_dict:
+            writer_lookup_dict[int] = writer_lookup_dict[float]
 
         def complex_writer_lookup(datum):
             cdef:
@@ -512,7 +518,7 @@ def make_union_writer(union_schema):
             try:
                 lookup_result = writer_lookup_dict[type(datum)]
             except KeyError:
-                raise TypeError("{} - Invalid datum for type in union. Schema: {}".format(repr(datum), schema))
+                raise TypeError("{} - Invalid datum for type in union. Schema: {}".format(repr(datum), union_schema))
             if len(lookup_result) == 1:
                 idx, get_check, writer = lookup_result[0]
             else:
