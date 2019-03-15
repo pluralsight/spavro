@@ -59,7 +59,7 @@ SCHEMAS_TO_VALIDATE = (
 )
 
 FILENAME = 'test_datafile.out'
-CODECS_TO_VALIDATE = ('null', 'deflate')
+CODECS_TO_VALIDATE = ('null', 'deflate', 'xz')
 try:
     import snappy
     CODECS_TO_VALIDATE += ('snappy',)

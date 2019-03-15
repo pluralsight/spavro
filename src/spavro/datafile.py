@@ -19,6 +19,7 @@
 Read/Write Avro File Object Containers.
 """
 import zlib
+import lzma
 import six
 from six import BytesIO as StringIO
 from spavro import schema
@@ -44,7 +45,7 @@ META_SCHEMA = schema.parse("""\
      {"name": "meta", "type": {"type": "map", "values": "bytes"}},
      {"name": "sync", "type": {"type": "fixed", "name": "sync", "size": %d}}]}
 """ % (MAGIC_SIZE, SYNC_SIZE))
-VALID_CODECS = ['null', 'deflate']
+VALID_CODECS = ['null', 'deflate', 'xz']
 if has_snappy:
         VALID_CODECS.append('snappy')
 VALID_ENCODINGS = ['binary'] # not used yet
@@ -178,6 +179,9 @@ class DataFileWriter(object):
             elif self.get_meta(CODEC_KEY) == 'snappy':
                 compressed_data = snappy.compress(uncompressed_data)
                 compressed_data_length = len(compressed_data) + 4 # crc32
+            elif self.get_meta(CODEC_KEY) == 'xz':
+                compressed_data = lzma.compress(uncompressed_data, format=lzma.FORMAT_XZ)
+                compressed_data_length = len(compressed_data)
             else:
                 fail_msg = '"%s" codec is not supported.' % self.get_meta(CODEC_KEY)
                 raise DataFileException(fail_msg)
@@ -340,6 +344,12 @@ class DataFileReader(six.Iterator):
             uncompressed = snappy.decompress(data)
             self._datum_decoder = io.BinaryDecoder(StringIO(uncompressed))
             self.raw_decoder.check_crc32(uncompressed);
+        elif self.codec == 'xz':
+            # Compressed data is stored as (length, data), which
+            # corresponds to how the "bytes" type is encoded.
+            data = self.raw_decoder.read_bytes()
+            uncompressed = lzma.decompress(data)
+            self._datum_decoder = io.BinaryDecoder(StringIO(uncompressed))
         else:
             raise DataFileException("Unknown codec: %r" % self.codec)
 
