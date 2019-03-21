@@ -19,7 +19,6 @@
 Read/Write Avro File Object Containers.
 """
 import zlib
-import lzma
 import six
 from six import BytesIO as StringIO
 from spavro import schema
@@ -29,6 +28,13 @@ try:
     has_snappy = True
 except ImportError:
     has_snappy = False
+
+
+try:
+    import lzma
+    has_xz = True
+except ImportError:
+    has_xz = False
 #
 # Constants
 #
@@ -45,9 +51,11 @@ META_SCHEMA = schema.parse("""\
      {"name": "meta", "type": {"type": "map", "values": "bytes"}},
      {"name": "sync", "type": {"type": "fixed", "name": "sync", "size": %d}}]}
 """ % (MAGIC_SIZE, SYNC_SIZE))
-VALID_CODECS = ['null', 'deflate', 'xz']
+VALID_CODECS = ['null', 'deflate']
 if has_snappy:
         VALID_CODECS.append('snappy')
+if has_xz:
+        VALID_CODECS.append('xz')
 VALID_ENCODINGS = ['binary'] # not used yet
 
 CODEC_KEY = "avro.codec"
