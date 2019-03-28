@@ -59,12 +59,18 @@ SCHEMAS_TO_VALIDATE = (
 )
 
 FILENAME = 'test_datafile.out'
-CODECS_TO_VALIDATE = ('null', 'deflate', 'xz')
+CODECS_TO_VALIDATE = ('null', 'deflate')
 try:
     import snappy
     CODECS_TO_VALIDATE += ('snappy',)
 except ImportError:
     print('Snappy not present, will skip testing it.')
+
+try:
+    import lzma
+    CODECS_TO_VALIDATE += ('xz',)
+except ImportError:
+    print('lzma not present, will skip testing xz codec.')
 
 # TODO(hammer): clean up written files with ant, not os.remove
 class TestDataFile(unittest.TestCase):
