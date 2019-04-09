@@ -66,6 +66,12 @@ try:
 except ImportError:
     print('Snappy not present, will skip testing it.')
 
+try:
+    import lzma
+    CODECS_TO_VALIDATE += ('xz',)
+except ImportError:
+    print('lzma not present, will skip testing xz codec.')
+
 # TODO(hammer): clean up written files with ant, not os.remove
 class TestDataFile(unittest.TestCase):
     def test_round_trip(self):
