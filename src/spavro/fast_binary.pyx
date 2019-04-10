@@ -637,9 +637,10 @@ def make_int_writer(schema):
     '''Create a int writer, adds a validation step before the actual
     write function to make sure the int value doesn't overflow'''
     def checked_int_write(outbuf, datum):
-        if not (isinstance(datum, six.integer_types)
-                        and INT_MIN_VALUE <= datum <= INT_MAX_VALUE):
-            raise TypeError("{} - Non integer value or overflow. Schema: {}".format(datum, schema))
+        if not (isinstance(datum, six.integer_types):
+            raise TypeError("Schema violation, {} is not an example of schema {}".format(datum, schema))
+        if INT_MIN_VALUE <= datum <= INT_MAX_VALUE):
+            raise TypeError("Schema violation, value overflow. {} can't be stored in schema: {}".format(datum, schema))
         write_long(outbuf, datum)
     return checked_int_write
 

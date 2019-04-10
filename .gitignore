@@ -30,3 +30,8 @@ output
 *.egg-info
 *.so
 dist/*
+
+#project
+perf_test
+benchmark/output
+profile
