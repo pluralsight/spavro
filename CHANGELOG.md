@@ -1,6 +1,13 @@
 Spavro Changelog
 -----------------
 
+1.1.22 - Apr 9, 2019
+====================
+
+- Added support for xz codec via a ([pull request](https://github.com/pluralsight/spavro/pull/7))
+- Improved the error reporting / validation for integers, calling out overflows as a separate case from non-integers.
+- Add union test for integer/float case
+
 1.1.21 - Jan 19, 2019
 =====================
 
