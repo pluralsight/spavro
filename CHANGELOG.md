@@ -1,6 +1,11 @@
 Spavro Changelog
 -----------------
 
+1.1.24 - Feb 21, 2020
+=====================
+
+- Fix [bug with buffer](https://github.com/pluralsight/spavro/issues/9) in datafile output via a ([pull request](https://github.com/pluralsight/spavro/pull/10)).
+
 1.1.22 - Apr 9, 2019
 ====================
 
