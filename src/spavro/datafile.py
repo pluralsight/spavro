@@ -208,7 +208,8 @@ class DataFileWriter(object):
             self.writer.write(self.sync_marker)
 
             # reset buffer
-            self.buffer_writer.truncate(0) 
+            self.buffer_writer.truncate(0)
+            self.buffer_writer.seek(0)
             self.block_count = 0
 
     def append(self, datum):
